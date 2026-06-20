@@ -4,7 +4,7 @@ import { Store, Pause, Play, SkipForward, Save, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const ActionBar: React.FC = () => {
-  const { isPaused, togglePause, nextDay, openUpgradeModal, saveGame, resetGame, timeOfDay } = useGameStore();
+  const { isPaused, togglePause, nextDay, openUpgradeModal, saveGame, resetGame, timeOfDay, todayCustomers } = useGameStore();
 
   const handleReset = () => {
     if (confirm('确定要重置游戏吗？所有进度将丢失！')) {
@@ -12,7 +12,7 @@ export const ActionBar: React.FC = () => {
     }
   };
 
-  const canEndDay = timeOfDay >= 10 || true;
+  const canEndDay = timeOfDay >= 20 || (todayCustomers > 0 && timeOfDay >= 10);
 
   return (
     <div className="bg-gradient-to-r from-coffee-dark via-coffee to-coffee-dark px-6 py-3 shadow-2xl border-t-4 border-warm-900/30">
