@@ -1,10 +1,10 @@
 import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
-import { Store, Pause, Play, SkipForward, Save, RotateCcw } from 'lucide-react';
+import { Store, Pause, Play, SkipForward, Save, RotateCcw, CalendarCheck, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const ActionBar: React.FC = () => {
-  const { isPaused, togglePause, nextDay, openUpgradeModal, saveGame, resetGame, timeOfDay, todayCustomers } = useGameStore();
+  const { isPaused, togglePause, nextDay, openUpgradeModal, openReservationPanel, openCatTraining, saveGame, resetGame, timeOfDay, todayCustomers, reservations } = useGameStore();
 
   const handleReset = () => {
     if (confirm('确定要重置游戏吗？所有进度将丢失！')) {
@@ -13,6 +13,7 @@ export const ActionBar: React.FC = () => {
   };
 
   const canEndDay = timeOfDay >= 20 || (todayCustomers > 0 && timeOfDay >= 10);
+  const activeReservations = reservations.filter((r) => r.status !== 'settled' && r.status !== 'expired');
 
   return (
     <div className="bg-gradient-to-r from-coffee-dark via-coffee to-coffee-dark px-6 py-3 shadow-2xl border-t-4 border-warm-900/30">
@@ -26,7 +27,27 @@ export const ActionBar: React.FC = () => {
         </button>
 
         <button
-          onClick={togglePause}
+          onClick={openReservationPanel}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-lavender to-pink text-white font-bold rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all border-2 border-white/30 relative"
+        >
+          <CalendarCheck className="w-4 h-4" />
+          <span className="text-sm">预约管理</span>
+          {activeReservations.length > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-danger text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md animate-bounce">
+              {activeReservations.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={openCatTraining}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink to-lavender text-white font-bold rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all border-2 border-white/30"
+        >
+          <Heart className="w-4 h-4 fill-white" />
+          <span className="text-sm">亲密训练</span>
+        </button>
+
+        <button
           className={cn(
             'flex items-center gap-2 px-5 py-2.5 font-bold rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all border-2',
             isPaused

@@ -13,6 +13,8 @@ export const createInitialCats = (): Cat[] => [
     isResting: false,
     unlocked: true,
     unlockCost: 0,
+    intimacyLevel: 1,
+    intimacyExp: 0,
   },
   {
     id: 'cat-2',
@@ -25,6 +27,8 @@ export const createInitialCats = (): Cat[] => [
     isResting: false,
     unlocked: true,
     unlockCost: 0,
+    intimacyLevel: 1,
+    intimacyExp: 0,
   },
   {
     id: 'cat-3',
@@ -37,6 +41,8 @@ export const createInitialCats = (): Cat[] => [
     isResting: false,
     unlocked: false,
     unlockCost: 300,
+    intimacyLevel: 1,
+    intimacyExp: 0,
   },
   {
     id: 'cat-4',
@@ -49,6 +55,8 @@ export const createInitialCats = (): Cat[] => [
     isResting: false,
     unlocked: false,
     unlockCost: 600,
+    intimacyLevel: 1,
+    intimacyExp: 0,
   },
   {
     id: 'cat-5',
@@ -61,6 +69,8 @@ export const createInitialCats = (): Cat[] => [
     isResting: false,
     unlocked: false,
     unlockCost: 1000,
+    intimacyLevel: 1,
+    intimacyExp: 0,
   },
   {
     id: 'cat-6',
@@ -73,6 +83,8 @@ export const createInitialCats = (): Cat[] => [
     isResting: false,
     unlocked: false,
     unlockCost: 1800,
+    intimacyLevel: 1,
+    intimacyExp: 0,
   },
 ];
 

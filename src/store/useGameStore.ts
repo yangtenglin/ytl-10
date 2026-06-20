@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { GameState, GameActions, DailyReport, Customer } from '../types/game';
-import { GAME_CONFIG } from '../utils/constants';
+import type { GameState, GameActions, Customer, Reservation } from '../types/game';
+import { GAME_CONFIG, CAT_MAX_INTIMACY_LEVEL, CAT_TRAINING_COST, CAT_TRAINING_EXP_GAIN } from '../utils/constants';
 import { createInitialCats, createInitialSeats, createInitialDrinks } from '../utils/initialData';
 import {
   generateId,
@@ -10,6 +10,14 @@ import {
   calculatePayment,
   createDailyReport,
   findEmptySeat,
+  createReservation as buildReservation,
+  createReservedCustomer,
+  addCatExp,
+  getCatEffectiveCharmBonus,
+  getCatEffectiveFatigueRate,
+  getCatEffectiveTipBonus,
+  getCatEffectiveSatisfactionBoost,
+  getAccompanyExpGain,
 } from '../utils/gameLogic';
 
 const getInitialState = (): GameState => ({
@@ -37,6 +45,9 @@ const getInitialState = (): GameState => ({
   showUpgradeModal: false,
   selectedSeatId: null,
   floatTexts: [],
+  reservations: [],
+  showReservationPanel: false,
+  showCatTraining: false,
 });
 
 const STORAGE_KEY = 'cat-cafe-save';
@@ -63,7 +74,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
       newState.customerSpawnTimer = s.customerSpawnTimer - deltaSeconds;
       if (newState.customerSpawnTimer <= 0 && newState.timeOfDay < 95) {
-        const emptySeat = findEmptySeat(newState.seats);
+        const reservedSeatIds = newState.reservations
+          .filter((r) => r.status !== 'settled' && r.status !== 'expired')
+          .map((r) => r.seatId);
+        const emptySeat = findEmptySeat(newState.seats, reservedSeatIds);
         if (emptySeat) {
           const newCustomer = createCustomer(emptySeat);
           newState.customers = [...s.customers, newCustomer];
@@ -84,22 +98,23 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           };
         }
         if (cat.assignedSeatId) {
+          const effectiveFatigueRate = getCatEffectiveFatigueRate(cat);
           return {
             ...cat,
-            fatigue: clamp(cat.fatigue + GAME_CONFIG.CAT_FATIGUE_RATE * deltaSeconds, 0, cat.maxFatigue),
+            fatigue: clamp(cat.fatigue + effectiveFatigueRate * deltaSeconds, 0, cat.maxFatigue),
           };
         }
         return cat;
       });
 
-      let updatedCustomers: Customer[] = [];
+      const updatedCustomers: Customer[] = [];
       let coinsGained = 0;
       let revenueGained = 0;
       let comboBonusGained = 0;
       let happyCount = 0;
 
       for (const customer of s.customers) {
-        let c = { ...customer };
+        const c = { ...customer };
         const seat = newState.seats.find((st) => st.id === c.seatId);
         const assignedCat = seat?.catId
           ? newState.cats.find((ct) => ct.id === seat.catId)
@@ -113,7 +128,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           case 'ordering':
             c.patience = clamp(c.patience - GAME_CONFIG.PATIENCE_DECAY_RATE * deltaSeconds, 0, c.maxPatience);
             if (assignedCat) {
-              c.satisfaction = clamp(c.satisfaction + 0.8 * deltaSeconds, 0, 100);
+              const effectiveSatBoost = getCatEffectiveSatisfactionBoost(assignedCat);
+              c.satisfaction = clamp(c.satisfaction + effectiveSatBoost * deltaSeconds, 0, 100);
             }
             if (c.patience <= 0) {
               c.status = 'leaving-angry';
@@ -148,18 +164,28 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         if (c.status === 'drinking' && seat) {
           const drink = s.drinks.find((d) => d.id === c.orderedDrinkId);
           if (drink) {
+            const effectiveCharm = assignedCat ? getCatEffectiveCharmBonus(assignedCat) : 0;
+            const effectiveTipCat = assignedCat ? getCatEffectiveTipBonus(assignedCat) : 0;
+            const catForPayment = assignedCat ? { ...assignedCat, charmBonus: effectiveCharm } : null;
             const payment = calculatePayment(
               drink,
               seat,
-              assignedCat,
+              catForPayment,
               s.combo,
               c.satisfaction,
-              c.tipMultiplier
+              c.tipMultiplier + effectiveTipCat
             );
             coinsGained += payment.total;
             revenueGained += payment.total;
             comboBonusGained += payment.comboBonus;
             happyCount++;
+
+            if (assignedCat) {
+              const expResult = addCatExp(assignedCat, getAccompanyExpGain());
+              newState.cats = newState.cats.map((ct) =>
+                ct.id === assignedCat.id ? { ...ct, intimacyLevel: expResult.intimacyLevel, intimacyExp: expResult.intimacyExp } : ct
+              );
+            }
 
             const nextCombo = Math.min(s.combo + 1, GAME_CONFIG.MAX_COMBO);
             newState.combo = nextCombo;
@@ -221,13 +247,49 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       }
       newState.floatTexts = [...s.floatTexts, ...newFloats].slice(-10);
 
+      const updatedReservations: Reservation[] = [];
+      for (const res of newState.reservations) {
+        const r = { ...res };
+        if (r.status === 'pending' && newState.timeOfDay >= r.timeSlot - GAME_CONFIG.RESERVATION_ARRIVAL_THRESHOLD) {
+          r.status = 'arrived';
+        }
+        if (r.status === 'arrived') {
+          r.lateness += deltaSeconds;
+          if (r.lateness > GAME_CONFIG.RESERVATION_LATE_GRACE) {
+            r.satisfactionPenalty += GAME_CONFIG.RESERVATION_LATE_SATISFACTION_RATE * deltaSeconds;
+          }
+          const seat = newState.seats.find((st) => st.id === r.seatId);
+          if (seat && !seat.customerId) {
+            const reservedCustomer = createReservedCustomer(r);
+            newState.customers = [...newState.customers, reservedCustomer];
+            newState.seats = newState.seats.map((st) =>
+              st.id === r.seatId ? { ...st, customerId: reservedCustomer.id } : st
+            );
+            newState.todayCustomers = (newState.todayCustomers || s.todayCustomers) + 1;
+            r.customerId = reservedCustomer.id;
+            r.status = 'seated';
+          }
+        }
+        if (r.status === 'seated' && r.customerId) {
+          const customerStillExists = newState.customers.some((c) => c.id === r.customerId);
+          if (!customerStillExists) {
+            r.status = 'settled';
+          }
+        }
+        updatedReservations.push(r);
+      }
+      newState.reservations = updatedReservations;
+
       return newState;
     });
   },
 
   spawnCustomer: () => {
     set((s) => {
-      const emptySeat = findEmptySeat(s.seats);
+      const reservedSeatIds = s.reservations
+        .filter((r) => r.status !== 'settled' && r.status !== 'expired')
+        .map((r) => r.seatId);
+      const emptySeat = findEmptySeat(s.seats, reservedSeatIds);
       if (!emptySeat) return s;
       const newCustomer = createCustomer(emptySeat);
       return {
@@ -480,6 +542,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       })),
       showDailyReport: true,
       lastReport: report,
+      reservations: state.reservations.map((r) =>
+        r.status === 'settled' || r.status === 'expired' ? r : { ...r, status: 'expired' as const }
+      ),
     }));
   },
 
@@ -500,6 +565,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       customerSpawnTimer: randInt(GAME_CONFIG.CUSTOMER_SPAWN_MIN, GAME_CONFIG.CUSTOMER_SPAWN_MAX),
       selectedSeatId: null,
       floatTexts: [],
+      reservations: [],
     }));
   },
 
@@ -565,5 +631,91 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     } catch {
       return false;
     }
+  },
+
+  createReservation: (seatId: string, timeSlot: number, preferredCatId: string | null) => {
+    const s = get();
+    if (s.coins < GAME_CONFIG.RESERVATION_DEPOSIT) return false;
+    const seat = s.seats.find((st) => st.id === seatId);
+    if (!seat) return false;
+    const existingReservation = s.reservations.find(
+      (r) => r.seatId === seatId && r.timeSlot === timeSlot && r.status !== 'settled' && r.status !== 'expired'
+    );
+    if (existingReservation) return false;
+
+    const reservation = buildReservation(seatId, timeSlot, preferredCatId);
+    set((state) => ({
+      ...state,
+      coins: state.coins - GAME_CONFIG.RESERVATION_DEPOSIT,
+      todayRevenue: state.todayRevenue + GAME_CONFIG.RESERVATION_DEPOSIT,
+      reservations: [...state.reservations, reservation],
+    }));
+    return true;
+  },
+
+  seatReservation: (reservationId: string) => {
+    const s = get();
+    const reservation = s.reservations.find((r) => r.id === reservationId);
+    if (!reservation || reservation.status !== 'arrived') return;
+
+    const seat = s.seats.find((st) => st.id === reservation.seatId);
+    if (!seat || seat.customerId) return;
+
+    const reservedCustomer = createReservedCustomer(reservation);
+    set((state) => ({
+      ...state,
+      customers: [...state.customers, reservedCustomer],
+      seats: state.seats.map((st) =>
+        st.id === reservation.seatId ? { ...st, customerId: reservedCustomer.id } : st
+      ),
+      todayCustomers: state.todayCustomers + 1,
+      reservations: state.reservations.map((r) =>
+        r.id === reservationId ? { ...r, customerId: reservedCustomer.id, status: 'seated' } : r
+      ),
+    }));
+  },
+
+  settleReservation: (reservationId: string) => {
+    set((state) => ({
+      ...state,
+      reservations: state.reservations.map((r) =>
+        r.id === reservationId ? { ...r, status: 'settled' } : r
+      ),
+    }));
+  },
+
+  openReservationPanel: () => {
+    set({ showReservationPanel: true, isPaused: true });
+  },
+
+  closeReservationPanel: () => {
+    set({ showReservationPanel: false, isPaused: false });
+  },
+
+  trainCat: (catId: string) => {
+    const s = get();
+    const cat = s.cats.find((c) => c.id === catId);
+    if (!cat || !cat.unlocked || s.coins < CAT_TRAINING_COST) return false;
+    if (cat.intimacyLevel >= CAT_MAX_INTIMACY_LEVEL) return false;
+
+    const expResult = addCatExp(cat, CAT_TRAINING_EXP_GAIN);
+
+    set((state) => ({
+      ...state,
+      coins: state.coins - CAT_TRAINING_COST,
+      todayExpense: state.todayExpense + CAT_TRAINING_COST,
+      cats: state.cats.map((c) =>
+        c.id === catId ? { ...c, intimacyLevel: expResult.intimacyLevel, intimacyExp: expResult.intimacyExp } : c
+      ),
+    }));
+    return true;
+  },
+
+  openCatTraining: () => {
+    set({ showCatTraining: true, isPaused: true });
+  },
+
+  closeCatTraining: () => {
+    set({ showCatTraining: false, isPaused: false });
   },
 }));

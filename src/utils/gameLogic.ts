@@ -1,5 +1,5 @@
-import type { Customer, Cat, Seat, Drink, DailyReport } from '../types/game';
-import { GAME_CONFIG, CUSTOMER_EMOJIS, CUSTOMER_NAMES } from './constants';
+import type { Customer, Cat, Seat, Drink, DailyReport, Reservation } from '../types/game';
+import { GAME_CONFIG, CUSTOMER_EMOJIS, CUSTOMER_NAMES, REGULAR_CUSTOMER_NAMES, REGULAR_CUSTOMER_EMOJIS, CAT_SKILLS, CAT_INTIMACY_EXP_TABLE, CAT_MAX_INTIMACY_LEVEL, CAT_ACCOMPANY_EXP_GAIN } from './constants';
 
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 11);
@@ -73,8 +73,8 @@ export const createDailyReport = (
   };
 };
 
-export const findEmptySeat = (seats: Seat[]): Seat | null => {
-  const emptySeats = seats.filter((s) => !s.customerId);
+export const findEmptySeat = (seats: Seat[], reservedSeatIds: string[] = []): Seat | null => {
+  const emptySeats = seats.filter((s) => !s.customerId && !reservedSeatIds.includes(s.id));
   if (emptySeats.length === 0) return null;
   return emptySeats[randInt(0, emptySeats.length - 1)];
 };
@@ -88,4 +88,101 @@ export const formatTime = (timeOfDay: number): string => {
   const hours = 9 + Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
+
+export const createReservation = (
+  seatId: string,
+  timeSlot: number,
+  preferredCatId: string | null,
+): Reservation => {
+  return {
+    id: generateId(),
+    customerName: randChoice(REGULAR_CUSTOMER_NAMES),
+    customerEmoji: randChoice(REGULAR_CUSTOMER_EMOJIS),
+    timeSlot,
+    preferredCatId,
+    deposit: GAME_CONFIG.RESERVATION_DEPOSIT,
+    status: 'pending',
+    seatId,
+    customerId: null,
+    lateness: 0,
+    satisfactionPenalty: 0,
+  };
+};
+
+export const createReservedCustomer = (reservation: Reservation): Customer => {
+  const maxPatience = randInt(80, 110);
+  return {
+    id: generateId(),
+    emoji: reservation.customerEmoji,
+    name: reservation.customerName,
+    patience: maxPatience,
+    maxPatience,
+    satisfaction: Math.max(0, 70 - reservation.satisfactionPenalty),
+    orderedDrinkId: null,
+    seatId: reservation.seatId,
+    status: 'waiting',
+    tipMultiplier: 1.2 + Math.random() * 0.4,
+  };
+};
+
+export const getCatEffectiveCharmBonus = (cat: Cat): number => {
+  let bonus = cat.charmBonus;
+  for (const skill of CAT_SKILLS) {
+    if (cat.intimacyLevel >= skill.levelRequired) {
+      bonus += skill.charmBonusAdd;
+    }
+  }
+  return bonus;
+};
+
+export const getCatEffectiveFatigueRate = (cat: Cat): number => {
+  let mul = 1;
+  for (const skill of CAT_SKILLS) {
+    if (cat.intimacyLevel >= skill.levelRequired) {
+      mul += skill.fatigueRateMul;
+    }
+  }
+  return GAME_CONFIG.CAT_FATIGUE_RATE * mul;
+};
+
+export const getCatEffectiveTipBonus = (cat: Cat): number => {
+  let bonus = 0;
+  for (const skill of CAT_SKILLS) {
+    if (cat.intimacyLevel >= skill.levelRequired) {
+      bonus += skill.tipBonusAdd;
+    }
+  }
+  return bonus;
+};
+
+export const getCatEffectiveSatisfactionBoost = (cat: Cat): number => {
+  let boost = 0.8;
+  for (const skill of CAT_SKILLS) {
+    if (cat.intimacyLevel >= skill.levelRequired) {
+      boost += skill.satisfactionBoostAdd;
+    }
+  }
+  return boost;
+};
+
+export const addCatExp = (cat: Cat, expGain: number): { intimacyLevel: number; intimacyExp: number } => {
+  if (cat.intimacyLevel >= CAT_MAX_INTIMACY_LEVEL) {
+    return { intimacyLevel: cat.intimacyLevel, intimacyExp: cat.intimacyExp };
+  }
+  let newExp = cat.intimacyExp + expGain;
+  let newLevel = cat.intimacyLevel;
+  while (newLevel < CAT_MAX_INTIMACY_LEVEL && newExp >= CAT_INTIMACY_EXP_TABLE[newLevel]) {
+    newExp -= CAT_INTIMACY_EXP_TABLE[newLevel];
+    newLevel++;
+  }
+  if (newLevel >= CAT_MAX_INTIMACY_LEVEL) {
+    newLevel = CAT_MAX_INTIMACY_LEVEL;
+    newExp = 0;
+  }
+  return { intimacyLevel: newLevel, intimacyExp: newExp };
+};
+
+export const getAccompanyExpGain = (): number => {
+  return CAT_ACCOMPANY_EXP_GAIN;
 };

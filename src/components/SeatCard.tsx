@@ -1,8 +1,9 @@
 import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
-import type { Seat, Customer, Cat, Drink, MakingDrink } from '@/types/game';
+import type { Seat, Customer, Cat, Drink, MakingDrink, Reservation } from '@/types/game';
 import { ProgressBar } from './ProgressBar';
-import { Star, Coffee, UserX, Sparkles } from 'lucide-react';
+import { Star, Coffee, UserX, Sparkles, CalendarCheck } from 'lucide-react';
+import { TIME_SLOT_LABELS } from '@/utils/constants';
 import { cn } from '@/lib/utils';
 
 interface SeatCardProps {
@@ -12,6 +13,7 @@ interface SeatCardProps {
   makingDrink?: MakingDrink;
   drink?: Drink;
   isSelected: boolean;
+  reservation?: Reservation;
 }
 
 export const SeatCard: React.FC<SeatCardProps> = ({
@@ -21,6 +23,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({
   makingDrink,
   drink,
   isSelected,
+  reservation,
 }) => {
   const { selectSeat, selectedSeatId } = useGameStore();
 
@@ -71,6 +74,20 @@ export const SeatCard: React.FC<SeatCardProps> = ({
       {seat.revenueBonus > 0 && (
         <div className="absolute top-2 right-2 px-2 py-0.5 bg-gold/20 rounded-full text-[10px] font-bold text-gold border border-gold/40">
           +{Math.round(seat.revenueBonus * 100)}%
+        </div>
+      )}
+
+      {reservation && !customer && (
+        <div className={cn(
+          'absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-0.5',
+          reservation.status === 'pending'
+            ? 'bg-lavender/20 text-lavender border-lavender/40'
+            : reservation.status === 'arrived'
+              ? 'bg-sunset/20 text-sunset border-sunset/40 animate-pulse'
+              : 'bg-mint/20 text-mint-dark border-mint/40'
+        )}>
+          <CalendarCheck className="w-2.5 h-2.5" />
+          {TIME_SLOT_LABELS[reservation.timeSlot]}
         </div>
       )}
 

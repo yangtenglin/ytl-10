@@ -2,8 +2,9 @@ import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import type { Cat } from '@/types/game';
 import { ProgressBar } from './ProgressBar';
-import { Moon, Heart, Zap, Lock } from 'lucide-react';
+import { Moon, Heart, Zap, Lock, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getCatEffectiveCharmBonus } from '@/utils/gameLogic';
 
 interface CatCardProps {
   cat: Cat;
@@ -94,9 +95,17 @@ export const CatCard: React.FC<CatCardProps> = ({ cat, selectedSeatId }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <span className="font-black text-coffee-dark text-sm truncate">{cat.name}</span>
-            <div className="flex items-center gap-0.5 text-xs text-pink">
-              <Heart className="w-3 h-3 fill-current" />
-              <span className="font-bold">+{Math.round(cat.charmBonus * 100)}%</span>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-0.5 text-xs text-pink">
+                <Heart className="w-3 h-3 fill-current" />
+                <span className="font-bold">+{Math.round(getCatEffectiveCharmBonus(cat) * 100)}%</span>
+              </div>
+              {cat.intimacyLevel > 1 && (
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-gradient-to-r from-pink/20 to-lavender/20 rounded-full">
+                  <Star className="w-2.5 h-2.5 text-pink fill-pink" />
+                  <span className="text-[10px] font-bold text-pink">Lv.{cat.intimacyLevel}</span>
+                </div>
+              )}
             </div>
           </div>
 

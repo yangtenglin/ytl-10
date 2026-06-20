@@ -19,7 +19,92 @@ export const GAME_CONFIG = {
   INITIAL_SEATS: 3,
   EXPAND_COST_BASE: 500,
   EXPAND_COST_MULTIPLIER: 1.8,
+  RESERVATION_DEPOSIT: 30,
+  RESERVATION_LATE_GRACE: 5,
+  RESERVATION_LATE_SATISFACTION_RATE: 3,
+  RESERVATION_ARRIVAL_THRESHOLD: 3,
 } as const;
+
+export const TIME_SLOTS = [10, 20, 30, 40, 50, 60, 70, 80, 90] as const;
+
+export const TIME_SLOT_LABELS: Record<number, string> = {
+  10: '10:00',
+  20: '11:00',
+  30: '12:00',
+  40: '13:00',
+  50: '14:00',
+  60: '15:00',
+  70: '16:00',
+  80: '17:00',
+  90: '18:00',
+};
+
+export const REGULAR_CUSTOMER_NAMES = [
+  '猫奴小王', '铲屎官阿花', '撸猫达人', '猫薄荷星人',
+  '吸猫成瘾', '猫咖老客', '喵星人挚友', '猫咪收藏家',
+];
+
+export const REGULAR_CUSTOMER_EMOJIS = [
+  '🧑‍🎤', '👩‍🎨', '👨‍💻', '🧕',
+  '👩‍🔬', '🧑‍🍳', '👨‍🎓', '👸',
+];
+
+export const CAT_INTIMACY_EXP_TABLE = [0, 20, 60, 130, 240, 400] as const;
+
+export const CAT_MAX_INTIMACY_LEVEL = CAT_INTIMACY_EXP_TABLE.length - 1;
+
+export const CAT_TRAINING_COST = 50;
+
+export const CAT_TRAINING_EXP_GAIN = 12;
+
+export const CAT_ACCOMPANY_EXP_GAIN = 8;
+
+export const CAT_SKILLS: import('../types/game').CatSkill[] = [
+  {
+    id: 'skill-gentle',
+    name: '乖巧',
+    emoji: '🐾',
+    description: '魅力加成提升，顾客更喜欢你',
+    levelRequired: 2,
+    charmBonusAdd: 0.06,
+    fatigueRateMul: 0,
+    tipBonusAdd: 0,
+    satisfactionBoostAdd: 0,
+  },
+  {
+    id: 'skill-affectionate',
+    name: '亲昵',
+    emoji: '💕',
+    description: '陪伴时顾客满意度额外提升',
+    levelRequired: 3,
+    charmBonusAdd: 0,
+    fatigueRateMul: 0,
+    tipBonusAdd: 0,
+    satisfactionBoostAdd: 8,
+  },
+  {
+    id: 'skill-warmheart',
+    name: '暖心',
+    emoji: '🌟',
+    description: '疲劳积累减缓，陪伴更持久',
+    levelRequired: 4,
+    charmBonusAdd: 0,
+    fatigueRateMul: -0.2,
+    tipBonusAdd: 0,
+    satisfactionBoostAdd: 0,
+  },
+  {
+    id: 'skill-luckycat',
+    name: '招财猫',
+    emoji: '💰',
+    description: '小费加成大幅提升',
+    levelRequired: 5,
+    charmBonusAdd: 0,
+    fatigueRateMul: 0,
+    tipBonusAdd: 0.15,
+    satisfactionBoostAdd: 0,
+  },
+];
 
 export const COLORS = {
   bg: '#FFF8F0',

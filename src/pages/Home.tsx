@@ -7,10 +7,12 @@ import { MenuPanel } from '@/components/MenuPanel';
 import { ActionBar } from '@/components/ActionBar';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { DailyReportModal } from '@/components/DailyReportModal';
+import { ReservationPanel } from '@/components/ReservationPanel';
+import { CatTrainingModal } from '@/components/CatTrainingModal';
 import { GAME_CONFIG } from '@/utils/constants';
 
 const Home: React.FC = () => {
-  const { tick, loadGame, saveGame, isPaused, showDailyReport, showUpgradeModal } = useGameStore();
+  const { tick, loadGame, saveGame, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining } = useGameStore();
   const lastTickRef = useRef<number>(Date.now());
   const rafRef = useRef<number>(0);
   const loadedRef = useRef(false);
@@ -28,7 +30,7 @@ const Home: React.FC = () => {
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
 
-      if (!isPaused && !showDailyReport && !showUpgradeModal) {
+      if (!isPaused && !showDailyReport && !showUpgradeModal && !showReservationPanel && !showCatTraining) {
         tick(Math.min(delta, 0.1));
       }
 
@@ -37,7 +39,7 @@ const Home: React.FC = () => {
 
     rafRef.current = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [tick, isPaused, showDailyReport, showUpgradeModal]);
+  }, [tick, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -88,8 +90,10 @@ const Home: React.FC = () => {
       <ActionBar />
       <UpgradeModal />
       <DailyReportModal />
+      <ReservationPanel />
+      <CatTrainingModal />
 
-      {isPaused && !showUpgradeModal && !showDailyReport && (
+      {isPaused && !showUpgradeModal && !showDailyReport && !showReservationPanel && !showCatTraining && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="px-12 py-8 bg-gradient-to-br from-coffee via-coffee-light to-coffee rounded-3xl shadow-2xl border-4 border-white/30 animate-scale-in">
             <div className="text-7xl text-center mb-4 animate-bounce-slow">😸</div>

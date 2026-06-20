@@ -1,3 +1,15 @@
+export interface CatSkill {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  levelRequired: number;
+  charmBonusAdd: number;
+  fatigueRateMul: number;
+  tipBonusAdd: number;
+  satisfactionBoostAdd: number;
+}
+
 export interface Cat {
   id: string;
   name: string;
@@ -9,6 +21,8 @@ export interface Cat {
   isResting: boolean;
   unlocked: boolean;
   unlockCost: number;
+  intimacyLevel: number;
+  intimacyExp: number;
 }
 
 export type CustomerStatus =
@@ -70,6 +84,22 @@ export interface DailyReport {
   comboBonus: number;
 }
 
+export type ReservationStatus = 'pending' | 'arrived' | 'seated' | 'settled' | 'expired';
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  customerEmoji: string;
+  timeSlot: number;
+  preferredCatId: string | null;
+  deposit: number;
+  status: ReservationStatus;
+  seatId: string | null;
+  customerId: string | null;
+  lateness: number;
+  satisfactionPenalty: number;
+}
+
 export interface GameState {
   coins: number;
   day: number;
@@ -95,6 +125,9 @@ export interface GameState {
   showUpgradeModal: boolean;
   selectedSeatId: string | null;
   floatTexts: { id: string; text: string; x: number; y: number; color: string }[];
+  reservations: Reservation[];
+  showReservationPanel: boolean;
+  showCatTraining: boolean;
 }
 
 export interface GameActions {
@@ -122,4 +155,12 @@ export interface GameActions {
   resetGame: () => void;
   saveGame: () => void;
   loadGame: () => boolean;
+  createReservation: (seatId: string, timeSlot: number, preferredCatId: string | null) => boolean;
+  seatReservation: (reservationId: string) => void;
+  settleReservation: (reservationId: string) => void;
+  openReservationPanel: () => void;
+  closeReservationPanel: () => void;
+  trainCat: (catId: string) => boolean;
+  openCatTraining: () => void;
+  closeCatTraining: () => void;
 }

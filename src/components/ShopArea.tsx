@@ -4,7 +4,7 @@ import { SeatCard } from './SeatCard';
 import { Store } from 'lucide-react';
 
 export const ShopArea: React.FC = () => {
-  const { seats, customers, cats, makingDrinks, drinks, selectedSeatId, floatTexts } = useGameStore();
+  const { seats, customers, cats, makingDrinks, drinks, selectedSeatId, floatTexts, reservations } = useGameStore();
 
   const customerMap = new Map(customers.map((c) => [c.id, c]));
   const catMap = new Map(cats.map((c) => [c.id, c]));
@@ -53,6 +53,9 @@ export const ShopArea: React.FC = () => {
             const cat = seat.catId ? catMap.get(seat.catId) : undefined;
             const makingDrink = makingDrinks.find((m) => m.seatId === seat.id);
             const drink = makingDrink ? drinkMap.get(makingDrink.drinkId) : undefined;
+            const reservation = reservations.find(
+              (r) => r.seatId === seat.id && r.status !== 'settled' && r.status !== 'expired'
+            );
 
             return (
               <SeatCard
@@ -63,6 +66,7 @@ export const ShopArea: React.FC = () => {
                 makingDrink={makingDrink}
                 drink={drink}
                 isSelected={selectedSeatId === seat.id}
+                reservation={reservation}
               />
             );
           })}
