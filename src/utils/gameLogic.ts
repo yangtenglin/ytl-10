@@ -1,5 +1,5 @@
-import type { Customer, Cat, Seat, Drink, DailyReport, Reservation } from '../types/game';
-import { GAME_CONFIG, CUSTOMER_EMOJIS, CUSTOMER_NAMES, REGULAR_CUSTOMER_NAMES, REGULAR_CUSTOMER_EMOJIS, CAT_SKILLS, CAT_INTIMACY_EXP_TABLE, CAT_MAX_INTIMACY_LEVEL, CAT_ACCOMPANY_EXP_GAIN } from './constants';
+import type { Customer, Cat, Seat, Drink, DailyReport, Reservation, DeliveryOrder, DeliveryDailyStats } from '../types/game';
+import { GAME_CONFIG, CUSTOMER_EMOJIS, CUSTOMER_NAMES, REGULAR_CUSTOMER_NAMES, REGULAR_CUSTOMER_EMOJIS, CAT_SKILLS, CAT_INTIMACY_EXP_TABLE, CAT_MAX_INTIMACY_LEVEL, CAT_ACCOMPANY_EXP_GAIN, DELIVERY_CUSTOMER_NAMES, DELIVERY_CUSTOMER_EMOJIS } from './constants';
 
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 11);
@@ -185,4 +185,57 @@ export const addCatExp = (cat: Cat, expGain: number): { intimacyLevel: number; i
 
 export const getAccompanyExpGain = (): number => {
   return CAT_ACCOMPANY_EXP_GAIN;
+};
+
+export const createDeliveryOrder = (drinks: Drink[]): DeliveryOrder | null => {
+  const unlockedDrinks = drinks.filter((d) => d.unlocked);
+  if (unlockedDrinks.length === 0) return null;
+
+  const drink = randChoice(unlockedDrinks);
+  const deliveryFee = Math.round(GAME_CONFIG.DELIVERY_BASE_FEE + drink.basePrice * GAME_CONFIG.DELIVERY_FEE_PER_PRICE);
+  const totalPrice = drink.basePrice + deliveryFee;
+  const maxTime = randInt(GAME_CONFIG.DELIVERY_TIME_MIN, GAME_CONFIG.DELIVERY_TIME_MAX);
+
+  return {
+    id: generateId(),
+    customerName: randChoice(DELIVERY_CUSTOMER_NAMES),
+    customerEmoji: randChoice(DELIVERY_CUSTOMER_EMOJIS),
+    drinkId: drink.id,
+    drinkName: drink.name,
+    drinkEmoji: drink.emoji,
+    drinkPrice: drink.basePrice,
+    deliveryFee,
+    totalPrice,
+    timeLeft: maxTime,
+    maxTime,
+    status: 'pending',
+    barStationId: null,
+    makeProgress: 0,
+    createdAt: Date.now(),
+  };
+};
+
+export const findEmptyBarStation = (stations: any[]): any | null => {
+  const emptyStations = stations.filter((s) => !s.occupied);
+  if (emptyStations.length === 0) return null;
+  return emptyStations[0];
+};
+
+export const createDeliveryDailyStats = (
+  stats: DeliveryDailyStats
+): DeliveryDailyStats => {
+  return {
+    ...stats,
+    deliveryProfit: stats.deliveryRevenue - stats.deliveryRefunds,
+  };
+};
+
+export const calculateDeliveryPayment = (order: DeliveryOrder): number => {
+  return order.totalPrice;
+};
+
+export const formatDeliveryTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import type { DailyReport } from '../types/game';
-import { Sparkles, TrendingUp, TrendingDown, Users, Smile, Flame, Award, ArrowRight } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Users, Smile, Flame, Award, ArrowRight, Bike } from 'lucide-react';
 
 interface StatRowProps {
   icon: React.ReactNode;
@@ -35,7 +35,7 @@ const StatRow: React.FC<StatRowProps> = ({ icon, label, value, highlight = false
 };
 
 export const DailyReportModal: React.FC = () => {
-  const { showDailyReport, lastReport, closeDailyReport } = useGameStore();
+  const { showDailyReport, lastReport, closeDailyReport, todayDeliveryStats } = useGameStore();
   const [displayedProfit, setDisplayedProfit] = useState(0);
 
   useEffect(() => {
@@ -131,6 +131,40 @@ export const DailyReportModal: React.FC = () => {
                 label="最高连击"
                 value={<span className="text-sunset">{report.maxCombo}x (+{report.comboBonus})</span>}
               />
+            )}
+
+            {todayDeliveryStats.totalOrders > 0 && (
+              <>
+                <div className="my-3 border-t border-dashed border-warm-300" />
+                <div className="py-2 px-4 bg-sunset/10 rounded-xl border border-sunset/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bike className="w-4 h-4 text-sunset" />
+                    <span className="font-bold text-coffee-dark text-sm">外卖统计</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-coffee-light">订单数:</span>
+                      <span className="font-bold text-coffee-dark">{todayDeliveryStats.completedOrders}/{todayDeliveryStats.totalOrders}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-coffee-light">完成率:</span>
+                      <span className="font-bold text-mint">
+                        {todayDeliveryStats.totalOrders > 0
+                          ? Math.round((todayDeliveryStats.completedOrders / todayDeliveryStats.totalOrders) * 100)
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-coffee-light">外卖收入:</span>
+                      <span className="font-bold text-mint">+{todayDeliveryStats.deliveryRevenue}💰</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-coffee-light">超时退款:</span>
+                      <span className="font-bold text-danger">-{todayDeliveryStats.deliveryRefunds}💰</span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>

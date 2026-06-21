@@ -100,6 +100,46 @@ export interface Reservation {
   satisfactionPenalty: number;
 }
 
+export type DeliveryStatus = 'pending' | 'accepted' | 'making' | 'delivering' | 'completed' | 'refunded' | 'expired';
+
+export interface DeliveryOrder {
+  id: string;
+  customerName: string;
+  customerEmoji: string;
+  drinkId: string;
+  drinkName: string;
+  drinkEmoji: string;
+  drinkPrice: number;
+  deliveryFee: number;
+  totalPrice: number;
+  timeLeft: number;
+  maxTime: number;
+  status: DeliveryStatus;
+  barStationId: string | null;
+  makeProgress: number;
+  createdAt: number;
+}
+
+export interface BarStation {
+  id: string;
+  name: string;
+  level: number;
+  occupied: boolean;
+  deliveryOrderId: string | null;
+  speedBonus: number;
+  upgradeCost: number;
+}
+
+export interface DeliveryDailyStats {
+  totalOrders: number;
+  completedOrders: number;
+  expiredOrders: number;
+  refundedOrders: number;
+  deliveryRevenue: number;
+  deliveryRefunds: number;
+  deliveryProfit: number;
+}
+
 export interface GameState {
   coins: number;
   day: number;
@@ -128,6 +168,11 @@ export interface GameState {
   reservations: Reservation[];
   showReservationPanel: boolean;
   showCatTraining: boolean;
+  deliveryOrders: DeliveryOrder[];
+  barStations: BarStation[];
+  showDeliveryPanel: boolean;
+  todayDeliveryStats: DeliveryDailyStats;
+  deliverySpawnTimer: number;
 }
 
 export interface GameActions {
@@ -163,4 +208,12 @@ export interface GameActions {
   trainCat: (catId: string) => boolean;
   openCatTraining: () => void;
   closeCatTraining: () => void;
+  acceptDeliveryOrder: (orderId: string) => boolean;
+  startMakingDelivery: (orderId: string) => boolean;
+  completeDeliveryOrder: (orderId: string) => void;
+  refundDeliveryOrder: (orderId: string) => void;
+  openDeliveryPanel: () => void;
+  closeDeliveryPanel: () => void;
+  upgradeBarStation: (stationId: string) => boolean;
+  expandBarStation: () => boolean;
 }

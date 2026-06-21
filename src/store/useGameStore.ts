@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import type { GameState, GameActions, Customer, Reservation } from '../types/game';
+import type { GameState, GameActions, Customer, Reservation, DeliveryOrder, DeliveryDailyStats } from '../types/game';
 import { GAME_CONFIG, CAT_MAX_INTIMACY_LEVEL, CAT_TRAINING_COST, CAT_TRAINING_EXP_GAIN } from '../utils/constants';
-import { createInitialCats, createInitialSeats, createInitialDrinks } from '../utils/initialData';
+import { createInitialCats, createInitialSeats, createInitialDrinks, createInitialBarStations, createInitialDeliveryStats } from '../utils/initialData';
 import {
   generateId,
   randInt,
@@ -18,6 +18,9 @@ import {
   getCatEffectiveTipBonus,
   getCatEffectiveSatisfactionBoost,
   getAccompanyExpGain,
+  createDeliveryOrder,
+  findEmptyBarStation,
+  calculateDeliveryPayment,
 } from '../utils/gameLogic';
 
 const getInitialState = (): GameState => ({
@@ -48,6 +51,11 @@ const getInitialState = (): GameState => ({
   reservations: [],
   showReservationPanel: false,
   showCatTraining: false,
+  deliveryOrders: [],
+  barStations: createInitialBarStations(),
+  showDeliveryPanel: false,
+  todayDeliveryStats: createInitialDeliveryStats(),
+  deliverySpawnTimer: randInt(GAME_CONFIG.DELIVERY_SPAWN_MIN, GAME_CONFIG.DELIVERY_SPAWN_MAX),
 });
 
 const STORAGE_KEY = 'cat-cafe-save';
@@ -279,6 +287,132 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         updatedReservations.push(r);
       }
       newState.reservations = updatedReservations;
+
+      newState.deliverySpawnTimer = s.deliverySpawnTimer - deltaSeconds;
+      if (newState.deliverySpawnTimer <= 0 && newState.timeOfDay < 90) {
+        const pendingCount = newState.deliveryOrders.filter((o) => o.status === 'pending').length;
+        if (pendingCount < 5) {
+          const newDelivery = createDeliveryOrder(newState.drinks);
+          if (newDelivery) {
+            newState.deliveryOrders = [...newState.deliveryOrders, newDelivery];
+            newState.todayDeliveryStats = {
+              ...newState.todayDeliveryStats,
+              totalOrders: newState.todayDeliveryStats.totalOrders + 1,
+            };
+          }
+        }
+        newState.deliverySpawnTimer = randInt(GAME_CONFIG.DELIVERY_SPAWN_MIN, GAME_CONFIG.DELIVERY_SPAWN_MAX);
+      }
+
+      const updatedDeliveryOrders: DeliveryOrder[] = [];
+      let deliveryCoinsGained = 0;
+      let deliveryRevenueGained = 0;
+      let deliveryRefunds = 0;
+      let completedCount = 0;
+      let expiredCount = 0;
+      let refundedCount = 0;
+
+      for (const order of newState.deliveryOrders) {
+        const o = { ...order };
+
+        if (o.status === 'pending') {
+          o.timeLeft = o.timeLeft - deltaSeconds;
+          if (o.timeLeft <= o.maxTime - GAME_CONFIG.DELIVERY_ACCEPT_WINDOW) {
+            o.status = 'expired';
+            expiredCount++;
+          }
+        } else if (o.status === 'accepted') {
+          o.timeLeft = o.timeLeft - deltaSeconds;
+          if (o.timeLeft <= 0) {
+            o.status = 'refunded';
+            refundedCount++;
+            deliveryRefunds += o.totalPrice;
+            newState.coins = newState.coins - o.totalPrice;
+            if (o.barStationId) {
+              newState.barStations = newState.barStations.map((st) =>
+                st.id === o.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
+              );
+            }
+          }
+        } else if (o.status === 'making') {
+          o.timeLeft = o.timeLeft - deltaSeconds;
+          const station = newState.barStations.find((st) => st.id === o.barStationId);
+          const drink = s.drinks.find((d) => d.id === o.drinkId);
+          if (station && drink) {
+            const speedMultiplier = 1 + station.speedBonus;
+            const increment = (100 / drink.makeTime) * deltaSeconds * speedMultiplier;
+            o.makeProgress = clamp(o.makeProgress + increment, 0, 100);
+          }
+          if (o.makeProgress >= 100) {
+            o.status = 'delivering';
+          }
+          if (o.timeLeft <= 0) {
+            o.status = 'refunded';
+            refundedCount++;
+            deliveryRefunds += o.totalPrice;
+            newState.coins = newState.coins - o.totalPrice;
+            if (o.barStationId) {
+              newState.barStations = newState.barStations.map((st) =>
+                st.id === o.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
+              );
+            }
+          }
+        } else if (o.status === 'delivering') {
+          o.timeLeft = o.timeLeft - deltaSeconds;
+          if (o.timeLeft <= 0) {
+            o.status = 'refunded';
+            refundedCount++;
+            deliveryRefunds += o.totalPrice;
+            newState.coins = newState.coins - o.totalPrice;
+            if (o.barStationId) {
+              newState.barStations = newState.barStations.map((st) =>
+                st.id === o.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
+              );
+            }
+          }
+        }
+
+        if (o.status !== 'expired' && o.status !== 'refunded' && o.status !== 'completed') {
+          updatedDeliveryOrders.push(o);
+        }
+      }
+
+      newState.deliveryOrders = updatedDeliveryOrders;
+      newState.coins += deliveryCoinsGained;
+
+      newState.todayDeliveryStats = {
+        ...newState.todayDeliveryStats,
+        completedOrders: newState.todayDeliveryStats.completedOrders + completedCount,
+        expiredOrders: newState.todayDeliveryStats.expiredOrders + expiredCount,
+        refundedOrders: newState.todayDeliveryStats.refundedOrders + refundedCount,
+        deliveryRevenue: newState.todayDeliveryStats.deliveryRevenue + deliveryRevenueGained,
+        deliveryRefunds: newState.todayDeliveryStats.deliveryRefunds + deliveryRefunds,
+      };
+
+      if (deliveryRevenueGained > 0) {
+        newState.floatTexts = [
+          ...newState.floatTexts,
+          {
+            id: generateId(),
+            text: `外卖+${deliveryRevenueGained}💰`,
+            x: 50 + randInt(-20, 20),
+            y: 40,
+            color: '#4CAF50',
+          },
+        ].slice(-10);
+      }
+      if (deliveryRefunds > 0) {
+        newState.floatTexts = [
+          ...newState.floatTexts,
+          {
+            id: generateId(),
+            text: `超时退款-${deliveryRefunds}💰`,
+            x: 50 + randInt(-20, 20),
+            y: 40,
+            color: '#FF5252',
+          },
+        ].slice(-10);
+      }
 
       return newState;
     });
@@ -520,11 +654,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   nextDay: () => {
     const s = get();
+    const totalRevenue = s.todayRevenue + s.todayDeliveryStats.deliveryRevenue;
+    const totalExpense = s.todayExpense + s.todayDeliveryStats.deliveryRefunds;
     const report = createDailyReport(
       s.day,
-      s.todayRevenue,
-      s.todayExpense,
-      s.todayCustomers,
+      totalRevenue,
+      totalExpense,
+      s.todayCustomers + s.todayDeliveryStats.completedOrders,
       s.todayHappyCustomers,
       s.maxCombo,
       s.comboBonusTotal
@@ -545,6 +681,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       reservations: state.reservations.map((r) =>
         r.status === 'settled' || r.status === 'expired' ? r : { ...r, status: 'expired' as const }
       ),
+      deliveryOrders: [],
+      barStations: state.barStations.map((st) => ({ ...st, occupied: false, deliveryOrderId: null })),
     }));
   },
 
@@ -566,6 +704,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       selectedSeatId: null,
       floatTexts: [],
       reservations: [],
+      todayDeliveryStats: createInitialDeliveryStats(),
+      deliverySpawnTimer: randInt(GAME_CONFIG.DELIVERY_SPAWN_MIN, GAME_CONFIG.DELIVERY_SPAWN_MAX),
     }));
   },
 
@@ -717,5 +857,162 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   closeCatTraining: () => {
     set({ showCatTraining: false, isPaused: false });
+  },
+
+  acceptDeliveryOrder: (orderId: string) => {
+    const s = get();
+    const order = s.deliveryOrders.find((o) => o.id === orderId);
+    if (!order || order.status !== 'pending') return false;
+
+    const emptyStation = findEmptyBarStation(s.barStations);
+    if (!emptyStation) return false;
+
+    set((state) => ({
+      ...state,
+      deliveryOrders: state.deliveryOrders.map((o) =>
+        o.id === orderId ? { ...o, status: 'accepted', barStationId: emptyStation.id } : o
+      ),
+      barStations: state.barStations.map((st) =>
+        st.id === emptyStation.id ? { ...st, occupied: true, deliveryOrderId: orderId } : st
+      ),
+    }));
+    return true;
+  },
+
+  startMakingDelivery: (orderId: string) => {
+    const s = get();
+    const order = s.deliveryOrders.find((o) => o.id === orderId);
+    if (!order || order.status !== 'accepted') return false;
+
+    set((state) => ({
+      ...state,
+      deliveryOrders: state.deliveryOrders.map((o) =>
+        o.id === orderId ? { ...o, status: 'making', makeProgress: 0 } : o
+      ),
+    }));
+    return true;
+  },
+
+  completeDeliveryOrder: (orderId: string) => {
+    const s = get();
+    const order = s.deliveryOrders.find((o) => o.id === orderId);
+    if (!order || (order.status !== 'delivering' && order.status !== 'making')) return;
+
+    const payment = calculateDeliveryPayment(order);
+
+    set((state) => ({
+      ...state,
+      coins: state.coins + payment,
+      todayDeliveryStats: {
+        ...state.todayDeliveryStats,
+        completedOrders: state.todayDeliveryStats.completedOrders + 1,
+        deliveryRevenue: state.todayDeliveryStats.deliveryRevenue + payment,
+      },
+      deliveryOrders: state.deliveryOrders.filter((o) => o.id !== orderId),
+      barStations: state.barStations.map((st) =>
+        st.id === order.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
+      ),
+      floatTexts: [
+        ...state.floatTexts,
+        {
+          id: generateId(),
+          text: `外卖+${payment}💰`,
+          x: 50 + randInt(-20, 20),
+          y: 40,
+          color: '#4CAF50',
+        },
+      ].slice(-10),
+    }));
+  },
+
+  refundDeliveryOrder: (orderId: string) => {
+    const s = get();
+    const order = s.deliveryOrders.find((o) => o.id === orderId);
+    if (!order || order.status === 'completed' || order.status === 'refunded' || order.status === 'expired') return;
+
+    const refundAmount = order.totalPrice;
+
+    set((state) => ({
+      ...state,
+      coins: Math.max(0, state.coins - refundAmount),
+      todayDeliveryStats: {
+        ...state.todayDeliveryStats,
+        refundedOrders: state.todayDeliveryStats.refundedOrders + 1,
+        deliveryRefunds: state.todayDeliveryStats.deliveryRefunds + refundAmount,
+      },
+      deliveryOrders: state.deliveryOrders.filter((o) => o.id !== orderId),
+      barStations: state.barStations.map((st) =>
+        st.id === order.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
+      ),
+      floatTexts: [
+        ...state.floatTexts,
+        {
+          id: generateId(),
+          text: `退款-${refundAmount}💰`,
+          x: 50 + randInt(-20, 20),
+          y: 40,
+          color: '#FF5252',
+        },
+      ].slice(-10),
+    }));
+  },
+
+  openDeliveryPanel: () => {
+    set({ showDeliveryPanel: true, isPaused: true });
+  },
+
+  closeDeliveryPanel: () => {
+    set({ showDeliveryPanel: false, isPaused: false });
+  },
+
+  upgradeBarStation: (stationId: string) => {
+    const s = get();
+    const station = s.barStations.find((st) => st.id === stationId);
+    if (!station || s.coins < station.upgradeCost) return false;
+
+    set((state) => ({
+      ...state,
+      coins: state.coins - station.upgradeCost,
+      todayExpense: state.todayExpense + station.upgradeCost,
+      barStations: state.barStations.map((st) =>
+        st.id === stationId
+          ? {
+              ...st,
+              level: st.level + 1,
+              speedBonus: st.speedBonus + GAME_CONFIG.DELIVERY_BAR_SPEED_BONUS_PER_LEVEL,
+              upgradeCost: Math.round(st.upgradeCost * GAME_CONFIG.DELIVERY_BAR_UPGRADE_MULTIPLIER),
+            }
+          : st
+      ),
+    }));
+    return true;
+  },
+
+  expandBarStation: () => {
+    const s = get();
+    if (s.barStations.length >= GAME_CONFIG.DELIVERY_MAX_STATIONS) return false;
+    const expandCost = GAME_CONFIG.DELIVERY_EXPAND_COST_BASE * Math.pow(GAME_CONFIG.DELIVERY_EXPAND_COST_MULTIPLIER, s.barStations.length - 1);
+    if (s.coins < expandCost) return false;
+
+    const newStationNumber = s.barStations.length + 1;
+
+    set((state) => ({
+      ...state,
+      coins: state.coins - expandCost,
+      todayExpense: state.todayExpense + expandCost,
+      barStations: [
+        ...state.barStations,
+        {
+          id: `bar-${generateId()}`,
+          name: `吧台${newStationNumber}`,
+          level: 1,
+          occupied: false,
+          deliveryOrderId: null,
+          speedBonus: 0,
+          upgradeCost: GAME_CONFIG.DELIVERY_BAR_UPGRADE_BASE,
+        },
+      ],
+    }));
+    return true;
   },
 }));

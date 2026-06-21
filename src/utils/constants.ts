@@ -23,6 +23,20 @@ export const GAME_CONFIG = {
   RESERVATION_LATE_GRACE: 5,
   RESERVATION_LATE_SATISFACTION_RATE: 3,
   RESERVATION_ARRIVAL_THRESHOLD: 3,
+  DELIVERY_SPAWN_MIN: 8,
+  DELIVERY_SPAWN_MAX: 15,
+  DELIVERY_INITIAL_STATIONS: 1,
+  DELIVERY_BASE_FEE: 8,
+  DELIVERY_FEE_PER_PRICE: 0.15,
+  DELIVERY_TIME_MIN: 45,
+  DELIVERY_TIME_MAX: 75,
+  DELIVERY_ACCEPT_WINDOW: 10,
+  DELIVERY_EXPAND_COST_BASE: 400,
+  DELIVERY_EXPAND_COST_MULTIPLIER: 2.0,
+  DELIVERY_BAR_UPGRADE_BASE: 250,
+  DELIVERY_BAR_UPGRADE_MULTIPLIER: 1.8,
+  DELIVERY_BAR_SPEED_BONUS_PER_LEVEL: 0.15,
+  DELIVERY_MAX_STATIONS: 4,
 } as const;
 
 export const TIME_SLOTS = [10, 20, 30, 40, 50, 60, 70, 80, 90] as const;
@@ -132,4 +146,14 @@ export const CUSTOMER_EMOJIS = [
 export const CUSTOMER_NAMES = [
   '小明', '小红', '阿花', '大壮', '小美', '老王', '张三', '李四',
   '咖啡控', '喵星人', '书虫', '白领', '学生党', '老爷爷', '老奶奶', '艺术家',
+];
+
+export const DELIVERY_CUSTOMER_NAMES = [
+  '外卖小哥', '加班族', '宅家党', '下午茶爱好者', '咖啡达人',
+  '甜品控', '上班族', '学生宿舍', '办公族', '追剧党',
+];
+
+export const DELIVERY_CUSTOMER_EMOJIS = [
+  '👨‍💼', '👩‍💻', '🧑‍🎓', '👨‍🏫', '👩‍⚕️',
+  '🧑‍🍳', '👨‍🎨', '👩‍🎤', '🧑‍🔬', '👨‍✈️',
 ];

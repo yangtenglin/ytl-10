@@ -9,10 +9,11 @@ import { UpgradeModal } from '@/components/UpgradeModal';
 import { DailyReportModal } from '@/components/DailyReportModal';
 import { ReservationPanel } from '@/components/ReservationPanel';
 import { CatTrainingModal } from '@/components/CatTrainingModal';
+import { DeliveryPanel } from '@/components/DeliveryPanel';
 import { GAME_CONFIG } from '@/utils/constants';
 
 const Home: React.FC = () => {
-  const { tick, loadGame, saveGame, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining } = useGameStore();
+  const { tick, loadGame, saveGame, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining, showDeliveryPanel } = useGameStore();
   const lastTickRef = useRef<number>(Date.now());
   const rafRef = useRef<number>(0);
   const loadedRef = useRef(false);
@@ -30,7 +31,7 @@ const Home: React.FC = () => {
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
 
-      if (!isPaused && !showDailyReport && !showUpgradeModal && !showReservationPanel && !showCatTraining) {
+      if (!isPaused && !showDailyReport && !showUpgradeModal && !showReservationPanel && !showCatTraining && !showDeliveryPanel) {
         tick(Math.min(delta, 0.1));
       }
 
@@ -39,7 +40,7 @@ const Home: React.FC = () => {
 
     rafRef.current = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [tick, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining]);
+  }, [tick, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining, showDeliveryPanel]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -92,8 +93,9 @@ const Home: React.FC = () => {
       <DailyReportModal />
       <ReservationPanel />
       <CatTrainingModal />
+      <DeliveryPanel />
 
-      {isPaused && !showUpgradeModal && !showDailyReport && !showReservationPanel && !showCatTraining && (
+      {isPaused && !showUpgradeModal && !showDailyReport && !showReservationPanel && !showCatTraining && !showDeliveryPanel && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="px-12 py-8 bg-gradient-to-br from-coffee via-coffee-light to-coffee rounded-3xl shadow-2xl border-4 border-white/30 animate-scale-in">
             <div className="text-7xl text-center mb-4 animate-bounce-slow">😸</div>

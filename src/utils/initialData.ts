@@ -1,4 +1,4 @@
-import type { Cat, Seat, Drink } from '../types/game';
+import type { Cat, Seat, Drink, BarStation, DeliveryDailyStats } from '../types/game';
 import { GAME_CONFIG } from './constants';
 
 export const createInitialCats = (): Cat[] => [
@@ -160,3 +160,29 @@ export const createInitialDrinks = (): Drink[] => [
     unlockCost: 1200,
   },
 ];
+
+export const createInitialBarStations = (): BarStation[] => {
+  const stations: BarStation[] = [];
+  for (let i = 0; i < GAME_CONFIG.DELIVERY_INITIAL_STATIONS; i++) {
+    stations.push({
+      id: `bar-${i + 1}`,
+      name: `吧台${i + 1}`,
+      level: 1,
+      occupied: false,
+      deliveryOrderId: null,
+      speedBonus: 0,
+      upgradeCost: GAME_CONFIG.DELIVERY_BAR_UPGRADE_BASE,
+    });
+  }
+  return stations;
+};
+
+export const createInitialDeliveryStats = (): DeliveryDailyStats => ({
+  totalOrders: 0,
+  completedOrders: 0,
+  expiredOrders: 0,
+  refundedOrders: 0,
+  deliveryRevenue: 0,
+  deliveryRefunds: 0,
+  deliveryProfit: 0,
+});
