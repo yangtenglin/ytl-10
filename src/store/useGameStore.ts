@@ -835,6 +835,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       drinks: state.drinks,
       expandCost: state.expandCost,
       coffeeMachine: state.coffeeMachine,
+      barStations: state.barStations.map((st) => ({
+        id: st.id,
+        name: st.name,
+        level: st.level,
+        speedBonus: st.speedBonus,
+        upgradeCost: st.upgradeCost,
+      })),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
   },
@@ -853,6 +860,17 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         drinks: saveData.drinks ?? s.drinks,
         expandCost: saveData.expandCost ?? s.expandCost,
         coffeeMachine: saveData.coffeeMachine ?? s.coffeeMachine,
+        barStations: saveData.barStations
+          ? saveData.barStations.map((st: any) => ({
+              id: st.id,
+              name: st.name,
+              level: st.level,
+              occupied: false,
+              deliveryOrderId: null,
+              speedBonus: st.speedBonus,
+              upgradeCost: st.upgradeCost,
+            }))
+          : s.barStations,
       }));
       return true;
     } catch {
