@@ -68,23 +68,23 @@ const Home: React.FC = () => {
 
       <main className="flex-1 p-4 overflow-hidden">
         <div className="h-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-4">
-          <div className="hidden lg:flex flex-col gap-4 h-[calc(100vh-200px)]">
-            <div className={showQueuePanel ? 'flex-1 min-h-0' : 'h-full'}>
-              <CatPanel />
-            </div>
-            {showQueuePanel && (
-              <div className="flex-1 min-h-0 max-h-[60%]">
-                <QueuePanel />
-              </div>
-            )}
+          <div className="hidden lg:block h-[calc(100vh-200px)]">
+            <CatPanel />
           </div>
 
           <div className="h-[calc(100vh-200px)] min-h-[500px]">
             <ShopArea />
           </div>
 
-          <div className="hidden lg:block h-[calc(100vh-200px)]">
-            <MenuPanel />
+          <div className="hidden lg:flex flex-col gap-4 h-[calc(100vh-200px)]">
+            {showQueuePanel && (
+              <div className="flex-1 min-h-0 max-h-[55%]">
+                <QueuePanel />
+              </div>
+            )}
+            <div className={showQueuePanel ? 'flex-1 min-h-0' : 'h-full'}>
+              <MenuPanel />
+            </div>
           </div>
         </div>
 

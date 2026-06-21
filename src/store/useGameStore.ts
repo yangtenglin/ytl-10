@@ -114,8 +114,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           const nextPos = newState.queue.length + 1;
           const queuedCustomer = createQueueCustomer(newState.drinks, nextPos);
           newState.queue = [...newState.queue, queuedCustomer];
+          newState.rushHourSpawnTimer = randInt(GAME_CONFIG.RUSH_HOUR_SPAWN_MIN, GAME_CONFIG.RUSH_HOUR_SPAWN_MAX);
         }
-        newState.rushHourSpawnTimer = randInt(GAME_CONFIG.RUSH_HOUR_SPAWN_MIN, GAME_CONFIG.RUSH_HOUR_SPAWN_MAX);
 
         const reservedSeatIds = newState.reservations
           .filter((r) => r.status !== 'settled' && r.status !== 'expired')
