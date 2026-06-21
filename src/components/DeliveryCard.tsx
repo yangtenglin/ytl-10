@@ -204,7 +204,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ order }) => {
             </button>
           )}
 
-          {order.status === 'delivering' && (
+          {order.status === 'delivering' && order.makeProgress >= 100 && (
             <button
               onClick={() => completeDeliveryOrder(order.id)}
               className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-mint to-mint-dark text-white font-bold text-sm rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"

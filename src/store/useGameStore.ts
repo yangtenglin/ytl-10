@@ -1067,7 +1067,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   completeDeliveryOrder: (orderId: string) => {
     const s = get();
     const order = s.deliveryOrders.find((o) => o.id === orderId);
-    if (!order || (order.status !== 'delivering' && order.status !== 'making')) return;
+    if (!order || order.makeProgress < 100 || (order.status !== 'delivering' && order.status !== 'making')) return;
 
     const payment = calculateDeliveryPayment(order);
     const completedOrder: DeliveryOrder = {
