@@ -1,10 +1,10 @@
 import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
-import { Store, Pause, Play, SkipForward, Save, RotateCcw, CalendarCheck, Heart, Bike } from 'lucide-react';
+import { Store, Pause, Play, SkipForward, Save, RotateCcw, CalendarCheck, Heart, Bike, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const ActionBar: React.FC = () => {
-  const { isPaused, togglePause, nextDay, openUpgradeModal, openReservationPanel, openCatTraining, openDeliveryPanel, saveGame, resetGame, timeOfDay, todayCustomers, reservations, deliveryOrders } = useGameStore();
+  const { isPaused, togglePause, nextDay, openUpgradeModal, openReservationPanel, openCatTraining, openDeliveryPanel, saveGame, resetGame, timeOfDay, todayCustomers, reservations, deliveryOrders, isRushHour, toggleRushHour, queue } = useGameStore();
 
   const handleReset = () => {
     if (confirm('确定要重置游戏吗？所有进度将丢失！')) {
@@ -62,11 +62,30 @@ export const ActionBar: React.FC = () => {
         </button>
 
         <button
+          onClick={toggleRushHour}
+          className={cn(
+            'flex items-center gap-2 px-5 py-2.5 font-bold rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all border-2 relative',
+            isRushHour
+              ? 'bg-gradient-to-r from-danger to-sunset text-white border-white/30 animate-pulse-slow'
+              : 'bg-gradient-to-r from-coffee-light to-coffee text-cream border-white/30'
+          )}
+        >
+          <Zap className={cn("w-4 h-4", isRushHour && "fill-white")} />
+          <span className="text-sm">早高峰</span>
+          {queue.length > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white text-coffee-dark text-[10px] font-black rounded-full flex items-center justify-center shadow-md border-2 border-sunset">
+              {queue.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={togglePause}
           className={cn(
             'flex items-center gap-2 px-5 py-2.5 font-bold rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all border-2',
             isPaused
               ? 'bg-gradient-to-r from-mint to-mint-dark text-white border-white/30'
-              : 'bg-gradient-to-r from-sunset to-peach text-white border-white/30'
+              : 'bg-gradient-to-r from-coffee-light via-coffee to-coffee-dark text-cream border-white/30'
           )}
         >
           {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}

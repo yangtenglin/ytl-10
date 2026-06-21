@@ -1,10 +1,10 @@
 import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { formatTime } from '@/utils/gameLogic';
-import { Coins, Clock, Flame, Calendar, TrendingUp } from 'lucide-react';
+import { Coins, Clock, Flame, Calendar, TrendingUp, Zap } from 'lucide-react';
 
 export const StatusBar: React.FC = () => {
-  const { coins, day, timeOfDay, combo, todayRevenue } = useGameStore();
+  const { coins, day, timeOfDay, combo, todayRevenue, isRushHour, queue } = useGameStore();
 
   return (
     <div className="relative bg-gradient-to-r from-coffee via-coffee-light to-coffee px-6 py-3 shadow-lg border-b-4 border-coffee-dark">
@@ -28,6 +28,19 @@ export const StatusBar: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-6">
+          {isRushHour && (
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-danger via-sunset to-peach px-4 py-1.5 rounded-full shadow-md animate-pulse-slow border-2 border-white/50 relative">
+              <Zap className="w-4 h-4 text-white fill-white drop-shadow-md" />
+              <span className="font-black text-white drop-shadow-md text-sm">
+                早高峰
+              </span>
+              {queue.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1 bg-white text-coffee-dark text-[10px] font-black rounded-full flex items-center justify-center shadow-md border-2 border-sunset">
+                  {queue.length}
+                </span>
+              )}
+            </div>
+          )}
           {combo > 0 && (
             <div className="flex items-center gap-2 bg-gradient-to-r from-peach to-sunset px-4 py-1.5 rounded-full shadow-md animate-pulse border-2 border-white/50">
               <Flame className="w-4 h-4 text-white drop-shadow-md" />

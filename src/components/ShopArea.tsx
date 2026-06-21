@@ -1,10 +1,11 @@
 import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { SeatCard } from './SeatCard';
-import { Store } from 'lucide-react';
+import { Store, Users, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export const ShopArea: React.FC = () => {
-  const { seats, customers, cats, makingDrinks, drinks, selectedSeatId, floatTexts, reservations } = useGameStore();
+  const { seats, customers, cats, makingDrinks, drinks, selectedSeatId, floatTexts, reservations, isRushHour, queue, todayQueueServed, todayQueueLeftAngry } = useGameStore();
 
   const customerMap = new Map(customers.map((c) => [c.id, c]));
   const catMap = new Map(cats.map((c) => [c.id, c]));
@@ -12,17 +13,48 @@ export const ShopArea: React.FC = () => {
 
   return (
     <div className="relative flex flex-col h-full bg-gradient-to-b from-cream via-warm-50 to-warm-100 rounded-3xl border-2 border-warm-200 shadow-xl overflow-hidden">
-      <div className="px-5 py-3 bg-gradient-to-r from-coffee-light via-coffee to-coffee-dark border-b-4 border-coffee-dark">
+      <div className={cn(
+        "px-5 py-3 border-b-4 transition-all duration-500",
+        isRushHour
+          ? "bg-gradient-to-r from-sunset via-peach to-sunset border-sunset/60"
+          : "bg-gradient-to-r from-coffee-light via-coffee to-coffee-dark border-coffee-dark"
+      )}>
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-2">
-            <Store className="w-5 h-5 text-cream drop-shadow" />
-            <h2 className="font-black text-cream text-base drop-shadow">🐾 猫咪咖啡店</h2>
+            <Store className={cn("w-5 h-5 drop-shadow", isRushHour ? "text-white" : "text-cream")} />
+            <h2 className={cn("font-black text-base drop-shadow", isRushHour ? "text-white" : "text-cream")}>
+              🐾 猫咪咖啡店
+            </h2>
+            {isRushHour && (
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full border border-white/30">
+                <Zap className="w-3 h-3 text-white fill-white animate-pulse" />
+                <span className="text-white text-[10px] font-black">早高峰</span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xs text-cream/80">
+          <div className="flex items-center gap-3">
+            {isRushHour && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/15 rounded-full border border-white/20">
+                <Users className="w-3.5 h-3.5 text-white" />
+                <span className="text-white text-[10px] font-bold">
+                  排队 {queue.length}
+                </span>
+                {todayQueueServed > 0 && (
+                  <span className="text-mint-light text-[10px] font-bold ml-1">
+                    ✓{todayQueueServed}
+                  </span>
+                )}
+                {todayQueueLeftAngry > 0 && (
+                  <span className="text-danger text-[10px] font-bold ml-1">
+                    ✗{todayQueueLeftAngry}
+                  </span>
+                )}
+              </div>
+            )}
+            <div className={cn("text-xs", isRushHour ? "text-white/80" : "text-cream/80")}>
               座位 <span className="font-bold text-white">{seats.filter(s => s.customerId).length}/{seats.length}</span>
             </div>
-            <div className="text-xs text-cream/80">
+            <div className={cn("text-xs", isRushHour ? "text-white/80" : "text-cream/80")}>
               猫咪 <span className="font-bold text-white">{cats.filter(c => c.unlocked).length}</span>
             </div>
           </div>

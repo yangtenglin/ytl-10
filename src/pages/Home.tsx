@@ -10,10 +10,11 @@ import { DailyReportModal } from '@/components/DailyReportModal';
 import { ReservationPanel } from '@/components/ReservationPanel';
 import { CatTrainingModal } from '@/components/CatTrainingModal';
 import { DeliveryPanel } from '@/components/DeliveryPanel';
+import { QueuePanel } from '@/components/QueuePanel';
 import { GAME_CONFIG } from '@/utils/constants';
 
 const Home: React.FC = () => {
-  const { tick, loadGame, saveGame, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining, showDeliveryPanel } = useGameStore();
+  const { tick, loadGame, saveGame, isPaused, showDailyReport, showUpgradeModal, showReservationPanel, showCatTraining, showDeliveryPanel, isRushHour, queue } = useGameStore();
   const lastTickRef = useRef<number>(Date.now());
   const rafRef = useRef<number>(0);
   const loadedRef = useRef(false);
@@ -59,14 +60,23 @@ const Home: React.FC = () => {
 
   void GAME_CONFIG;
 
+  const showQueuePanel = isRushHour || queue.length > 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-texture">
       <StatusBar />
 
       <main className="flex-1 p-4 overflow-hidden">
         <div className="h-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-4">
-          <div className="hidden lg:block h-[calc(100vh-200px)]">
-            <CatPanel />
+          <div className="hidden lg:flex flex-col gap-4 h-[calc(100vh-200px)]">
+            <div className={showQueuePanel ? 'flex-1 min-h-0' : 'h-full'}>
+              <CatPanel />
+            </div>
+            {showQueuePanel && (
+              <div className="flex-1 min-h-0 max-h-[60%]">
+                <QueuePanel />
+              </div>
+            )}
           </div>
 
           <div className="h-[calc(100vh-200px)] min-h-[500px]">
@@ -79,6 +89,11 @@ const Home: React.FC = () => {
         </div>
 
         <div className="lg:hidden mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {showQueuePanel && (
+            <div className="h-[340px] md:col-span-2">
+              <QueuePanel />
+            </div>
+          )}
           <div className="h-[300px]">
             <CatPanel />
           </div>

@@ -26,13 +26,15 @@ export interface Cat {
 }
 
 export type CustomerStatus =
+  | 'queuing'
   | 'entering'
   | 'waiting'
   | 'ordering'
   | 'served'
   | 'drinking'
   | 'leaving-happy'
-  | 'leaving-angry';
+  | 'leaving-angry'
+  | 'leaving-queue';
 
 export interface Customer {
   id: string;
@@ -42,7 +44,9 @@ export interface Customer {
   maxPatience: number;
   satisfaction: number;
   orderedDrinkId: string | null;
+  desiredDrinkId: string | null;
   seatId: string | null;
+  queuePosition: number | null;
   status: CustomerStatus;
   tipMultiplier: number;
 }
@@ -155,6 +159,7 @@ export interface GameState {
   comboBonusTotal: number;
   cats: Cat[];
   customers: Customer[];
+  queue: Customer[];
   seats: Seat[];
   drinks: Drink[];
   makingDrinks: MakingDrink[];
@@ -173,6 +178,10 @@ export interface GameState {
   showDeliveryPanel: boolean;
   todayDeliveryStats: DeliveryDailyStats;
   deliverySpawnTimer: number;
+  isRushHour: boolean;
+  rushHourSpawnTimer: number;
+  todayQueueLeftAngry: number;
+  todayQueueServed: number;
 }
 
 export interface GameActions {
@@ -216,4 +225,7 @@ export interface GameActions {
   closeDeliveryPanel: () => void;
   upgradeBarStation: (stationId: string) => boolean;
   expandBarStation: () => boolean;
+  toggleRushHour: () => void;
+  seatNextFromQueue: () => boolean;
+  queueCustomerLeave: (customerId: string, angry: boolean) => void;
 }

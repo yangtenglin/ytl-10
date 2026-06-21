@@ -27,8 +27,30 @@ export const createCustomer = (seat: Seat | null): Customer => {
     maxPatience,
     satisfaction: 50,
     orderedDrinkId: null,
+    desiredDrinkId: null,
     seatId: seat ? seat.id : null,
+    queuePosition: null,
     status: seat ? 'waiting' : 'entering',
+    tipMultiplier: 1 + Math.random() * 0.5,
+  };
+};
+
+export const createQueueCustomer = (drinks: Drink[], queuePosition: number): Customer => {
+  const unlockedDrinks = drinks.filter((d) => d.unlocked);
+  const desiredDrink = unlockedDrinks.length > 0 ? randChoice(unlockedDrinks) : null;
+  const maxPatience = randInt(GAME_CONFIG.RUSH_HOUR_PATIENCE_MIN, GAME_CONFIG.RUSH_HOUR_PATIENCE_MAX);
+  return {
+    id: generateId(),
+    emoji: randChoice(CUSTOMER_EMOJIS),
+    name: randChoice(CUSTOMER_NAMES),
+    patience: maxPatience,
+    maxPatience,
+    satisfaction: 50,
+    orderedDrinkId: null,
+    desiredDrinkId: desiredDrink ? desiredDrink.id : null,
+    seatId: null,
+    queuePosition,
+    status: 'queuing',
     tipMultiplier: 1 + Math.random() * 0.5,
   };
 };
@@ -120,7 +142,9 @@ export const createReservedCustomer = (reservation: Reservation): Customer => {
     maxPatience,
     satisfaction: Math.max(0, 70 - reservation.satisfactionPenalty),
     orderedDrinkId: null,
+    desiredDrinkId: null,
     seatId: reservation.seatId,
+    queuePosition: null,
     status: 'waiting',
     tipMultiplier: 1.2 + Math.random() * 0.4,
   };

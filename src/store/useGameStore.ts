@@ -7,6 +7,7 @@ import {
   randInt,
   clamp,
   createCustomer,
+  createQueueCustomer,
   calculatePayment,
   createDailyReport,
   findEmptySeat,
@@ -38,6 +39,7 @@ const getInitialState = (): GameState => ({
   comboBonusTotal: 0,
   cats: createInitialCats(),
   customers: [],
+  queue: [],
   seats: createInitialSeats(),
   drinks: createInitialDrinks(),
   makingDrinks: [],
@@ -56,6 +58,10 @@ const getInitialState = (): GameState => ({
   showDeliveryPanel: false,
   todayDeliveryStats: createInitialDeliveryStats(),
   deliverySpawnTimer: randInt(GAME_CONFIG.DELIVERY_SPAWN_MIN, GAME_CONFIG.DELIVERY_SPAWN_MAX),
+  isRushHour: false,
+  rushHourSpawnTimer: randInt(GAME_CONFIG.RUSH_HOUR_SPAWN_MIN, GAME_CONFIG.RUSH_HOUR_SPAWN_MAX),
+  todayQueueLeftAngry: 0,
+  todayQueueServed: 0,
 });
 
 const STORAGE_KEY = 'cat-cafe-save';
@@ -72,6 +78,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
       newState.timeOfDay = clamp(s.timeOfDay + (deltaSeconds / GAME_CONFIG.DAY_DURATION) * 100, 0, 100);
 
+      const autoRushHour = newState.timeOfDay >= GAME_CONFIG.RUSH_HOUR_START && newState.timeOfDay <= GAME_CONFIG.RUSH_HOUR_END;
+      newState.isRushHour = s.isRushHour || autoRushHour;
+
       if (s.combo > 0) {
         newState.comboTimer = s.comboTimer - deltaSeconds;
         if (newState.comboTimer <= 0) {
@@ -80,8 +89,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         }
       }
 
+      const inRushHour = newState.isRushHour && newState.timeOfDay < 95;
+
       newState.customerSpawnTimer = s.customerSpawnTimer - deltaSeconds;
-      if (newState.customerSpawnTimer <= 0 && newState.timeOfDay < 95) {
+      if (!inRushHour && newState.customerSpawnTimer <= 0 && newState.timeOfDay < 95) {
         const reservedSeatIds = newState.reservations
           .filter((r) => r.status !== 'settled' && r.status !== 'expired')
           .map((r) => r.seatId);
@@ -95,6 +106,53 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           newState.todayCustomers = s.todayCustomers + 1;
         }
         newState.customerSpawnTimer = randInt(GAME_CONFIG.CUSTOMER_SPAWN_MIN, GAME_CONFIG.CUSTOMER_SPAWN_MAX);
+      }
+
+      if (inRushHour) {
+        newState.rushHourSpawnTimer = s.rushHourSpawnTimer - deltaSeconds;
+        if (newState.rushHourSpawnTimer <= 0 && newState.queue.length < GAME_CONFIG.RUSH_HOUR_MAX_QUEUE) {
+          const nextPos = newState.queue.length + 1;
+          const queuedCustomer = createQueueCustomer(newState.drinks, nextPos);
+          newState.queue = [...newState.queue, queuedCustomer];
+        }
+        newState.rushHourSpawnTimer = randInt(GAME_CONFIG.RUSH_HOUR_SPAWN_MIN, GAME_CONFIG.RUSH_HOUR_SPAWN_MAX);
+
+        const reservedSeatIds = newState.reservations
+          .filter((r) => r.status !== 'settled' && r.status !== 'expired')
+          .map((r) => r.seatId);
+        while (newState.queue.length > 0) {
+          const emptySeat = findEmptySeat(newState.seats, reservedSeatIds);
+          if (!emptySeat) break;
+          const firstInQueue = newState.queue[0];
+          const seatedCustomer: Customer = {
+            ...firstInQueue,
+            seatId: emptySeat.id,
+            queuePosition: null,
+            status: 'waiting',
+            patience: clamp(firstInQueue.patience + 10, 0, firstInQueue.maxPatience),
+          };
+          newState.queue = newState.queue.slice(1).map((c, idx) => ({ ...c, queuePosition: idx + 1 }));
+          newState.customers = [...newState.customers, seatedCustomer];
+          newState.seats = newState.seats.map((st) =>
+            st.id === emptySeat.id ? { ...st, customerId: seatedCustomer.id } : st
+          );
+          newState.todayCustomers = (newState.todayCustomers || s.todayCustomers) + 1;
+          newState.todayQueueServed = (newState.todayQueueServed || 0) + 1;
+        }
+
+        const updatedQueue: Customer[] = [];
+        let queueAngryCount = 0;
+        for (const qc of newState.queue) {
+          const c = { ...qc };
+          c.patience = clamp(c.patience - GAME_CONFIG.RUSH_HOUR_QUEUE_PATIENCE_DECAY * deltaSeconds, 0, c.maxPatience);
+          if (c.patience <= 0) {
+            queueAngryCount++;
+          } else {
+            updatedQueue.push(c);
+          }
+        }
+        newState.queue = updatedQueue.map((c, idx) => ({ ...c, queuePosition: idx + 1 }));
+        newState.todayQueueLeftAngry = (newState.todayQueueLeftAngry || 0) + queueAngryCount;
       }
 
       newState.cats = s.cats.map((cat) => {
@@ -683,6 +741,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ),
       deliveryOrders: [],
       barStations: state.barStations.map((st) => ({ ...st, occupied: false, deliveryOrderId: null })),
+      queue: [],
     }));
   },
 
@@ -706,6 +765,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       reservations: [],
       todayDeliveryStats: createInitialDeliveryStats(),
       deliverySpawnTimer: randInt(GAME_CONFIG.DELIVERY_SPAWN_MIN, GAME_CONFIG.DELIVERY_SPAWN_MAX),
+      isRushHour: false,
+      rushHourSpawnTimer: randInt(GAME_CONFIG.RUSH_HOUR_SPAWN_MIN, GAME_CONFIG.RUSH_HOUR_SPAWN_MAX),
+      todayQueueLeftAngry: 0,
+      todayQueueServed: 0,
+      queue: [],
     }));
   },
 
@@ -1014,5 +1078,54 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ],
     }));
     return true;
+  },
+
+  toggleRushHour: () => {
+    set((s) => ({ ...s, isRushHour: !s.isRushHour }));
+  },
+
+  seatNextFromQueue: () => {
+    const s = get();
+    if (s.queue.length === 0) return false;
+    const reservedSeatIds = s.reservations
+      .filter((r) => r.status !== 'settled' && r.status !== 'expired')
+      .map((r) => r.seatId);
+    const emptySeat = findEmptySeat(s.seats, reservedSeatIds);
+    if (!emptySeat) return false;
+
+    const firstInQueue = s.queue[0];
+    const seatedCustomer: Customer = {
+      ...firstInQueue,
+      seatId: emptySeat.id,
+      queuePosition: null,
+      status: 'waiting',
+      patience: clamp(firstInQueue.patience + 10, 0, firstInQueue.maxPatience),
+    };
+
+    set((state) => ({
+      ...state,
+      queue: state.queue.slice(1).map((c, idx) => ({ ...c, queuePosition: idx + 1 })),
+      customers: [...state.customers, seatedCustomer],
+      seats: state.seats.map((st) =>
+        st.id === emptySeat.id ? { ...st, customerId: seatedCustomer.id } : st
+      ),
+      todayCustomers: state.todayCustomers + 1,
+      todayQueueServed: state.todayQueueServed + 1,
+    }));
+    return true;
+  },
+
+  queueCustomerLeave: (customerId: string, angry: boolean) => {
+    set((s) => {
+      const customer = s.queue.find((c) => c.id === customerId);
+      if (!customer) return s;
+      return {
+        ...s,
+        queue: s.queue
+          .filter((c) => c.id !== customerId)
+          .map((c, idx) => ({ ...c, queuePosition: idx + 1 })),
+        todayQueueLeftAngry: angry ? s.todayQueueLeftAngry + 1 : s.todayQueueLeftAngry,
+      };
+    });
   },
 }));
