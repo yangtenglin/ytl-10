@@ -1,4 +1,4 @@
-import type { Cat, Seat, Drink, BarStation, DeliveryDailyStats } from '../types/game';
+import type { Cat, Seat, Drink, BarStation, DeliveryDailyStats, Equipment } from '../types/game';
 import { GAME_CONFIG } from './constants';
 
 export const createInitialCats = (): Cat[] => [
@@ -185,4 +185,14 @@ export const createInitialDeliveryStats = (): DeliveryDailyStats => ({
   deliveryRevenue: 0,
   deliveryRefunds: 0,
   deliveryProfit: 0,
+});
+
+export const createInitialCoffeeMachine = (): Equipment => ({
+  id: 'coffee-machine',
+  name: '咖啡机',
+  emoji: '☕',
+  level: GAME_CONFIG.COFFEE_MACHINE_INITIAL_LEVEL,
+  speedBonus: 0,
+  upgradeCost: GAME_CONFIG.COFFEE_MACHINE_BASE_UPGRADE_COST,
+  maxLevel: GAME_CONFIG.COFFEE_MACHINE_MAX_LEVEL,
 });

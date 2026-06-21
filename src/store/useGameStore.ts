@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { GameState, GameActions, Customer, Reservation, DeliveryOrder } from '../types/game';
 import { GAME_CONFIG, CAT_MAX_INTIMACY_LEVEL, CAT_TRAINING_COST, CAT_TRAINING_EXP_GAIN } from '../utils/constants';
-import { createInitialCats, createInitialSeats, createInitialDrinks, createInitialBarStations, createInitialDeliveryStats } from '../utils/initialData';
+import { createInitialCats, createInitialSeats, createInitialDrinks, createInitialBarStations, createInitialDeliveryStats, createInitialCoffeeMachine } from '../utils/initialData';
 import {
   generateId,
   randInt,
@@ -63,6 +63,7 @@ const getInitialState = (): GameState => ({
   rushHourSpawnTimer: randInt(GAME_CONFIG.RUSH_HOUR_SPAWN_MIN, GAME_CONFIG.RUSH_HOUR_SPAWN_MAX),
   todayQueueLeftAngry: 0,
   todayQueueServed: 0,
+  coffeeMachine: createInitialCoffeeMachine(),
 });
 
 const STORAGE_KEY = 'cat-cafe-save';
@@ -290,7 +291,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         .map((m) => {
           const drink = s.drinks.find((d) => d.id === m.drinkId);
           if (!drink) return m;
-          const increment = (100 / drink.makeTime) * deltaSeconds;
+          const speedMultiplier = 1 + s.coffeeMachine.speedBonus;
+          const increment = (100 / drink.makeTime) * deltaSeconds * speedMultiplier;
           return { ...m, progress: clamp(m.progress + increment, 0, 100) };
         })
         .filter((m) => {
@@ -824,6 +826,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       seats: state.seats,
       drinks: state.drinks,
       expandCost: state.expandCost,
+      coffeeMachine: state.coffeeMachine,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
   },
@@ -841,6 +844,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         seats: saveData.seats ?? s.seats,
         drinks: saveData.drinks ?? s.drinks,
         expandCost: saveData.expandCost ?? s.expandCost,
+        coffeeMachine: saveData.coffeeMachine ?? s.coffeeMachine,
       }));
       return true;
     } catch {
@@ -1214,5 +1218,24 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         todayQueueLeftAngry: angry ? s.todayQueueLeftAngry + 1 : s.todayQueueLeftAngry,
       };
     });
+  },
+
+  upgradeCoffeeMachine: () => {
+    const s = get();
+    if (s.coffeeMachine.level >= s.coffeeMachine.maxLevel) return false;
+    if (s.coins < s.coffeeMachine.upgradeCost) return false;
+
+    set((state) => ({
+      ...state,
+      coins: state.coins - state.coffeeMachine.upgradeCost,
+      todayExpense: state.todayExpense + state.coffeeMachine.upgradeCost,
+      coffeeMachine: {
+        ...state.coffeeMachine,
+        level: state.coffeeMachine.level + 1,
+        speedBonus: state.coffeeMachine.speedBonus + GAME_CONFIG.COFFEE_MACHINE_BASE_SPEED_BONUS,
+        upgradeCost: Math.round(state.coffeeMachine.upgradeCost * GAME_CONFIG.COFFEE_MACHINE_UPGRADE_MULTIPLIER),
+      },
+    }));
+    return true;
   },
 }));

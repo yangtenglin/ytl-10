@@ -142,6 +142,16 @@ export interface BarStation {
   upgradeCost: number;
 }
 
+export interface Equipment {
+  id: string;
+  name: string;
+  emoji: string;
+  level: number;
+  speedBonus: number;
+  upgradeCost: number;
+  maxLevel: number;
+}
+
 export interface DeliveryDailyStats {
   totalOrders: number;
   completedOrders: number;
@@ -191,6 +201,7 @@ export interface GameState {
   rushHourSpawnTimer: number;
   todayQueueLeftAngry: number;
   todayQueueServed: number;
+  coffeeMachine: Equipment;
 }
 
 export interface GameActions {
@@ -238,4 +249,5 @@ export interface GameActions {
   toggleRushHour: () => void;
   seatNextFromQueue: () => boolean;
   queueCustomerLeave: (customerId: string, angry: boolean) => void;
+  upgradeCoffeeMachine: () => boolean;
 }

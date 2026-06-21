@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '@/store/useGameStore';
-import { X, Star, Cat, Coffee, Store, ArrowUp, Coins, Lock, Unlock } from 'lucide-react';
+import { X, Star, Cat, Coffee, Store, ArrowUp, Coins, Lock, Unlock, Cog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const UpgradeModal: React.FC = () => {
@@ -12,10 +12,12 @@ export const UpgradeModal: React.FC = () => {
     drinks,
     coins,
     expandCost,
+    coffeeMachine,
     upgradeSeat,
     unlockCat,
     unlockDrink,
     expandShop,
+    upgradeCoffeeMachine,
   } = useGameStore();
 
   if (!showUpgradeModal) return null;
@@ -245,6 +247,71 @@ export const UpgradeModal: React.FC = () => {
                   )}
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 rounded-xl bg-sunset/20">
+                <Cog className="w-5 h-5 text-sunset" />
+              </div>
+              <h3 className="text-lg font-black text-coffee-dark">服务设备</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-4 bg-gradient-to-br from-sunset/10 to-orange-50 rounded-2xl border-2 border-sunset/30 shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="text-4xl p-2 rounded-xl bg-white/60 shadow-sm">
+                    {coffeeMachine.emoji}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-black text-coffee-dark">{coffeeMachine.name}</span>
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: coffeeMachine.level }).map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 text-sunset fill-sunset" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-coffee-light">
+                      Lv.{coffeeMachine.level} / {coffeeMachine.maxLevel}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-coffee mb-3">
+                  {coffeeMachine.level < coffeeMachine.maxLevel ? (
+                    <>
+                      制作速度 <span className="font-bold text-sunset">+{Math.round(coffeeMachine.speedBonus * 100)}%</span>
+                      <span className="mx-1">→</span>
+                      <span className="font-bold text-mint">+{Math.round((coffeeMachine.speedBonus + 0.15) * 100)}%</span>
+                    </>
+                  ) : (
+                    <>
+                      制作速度 <span className="font-bold text-mint">+{Math.round(coffeeMachine.speedBonus * 100)}%</span>
+                      <span className="mx-2">·</span>
+                      <span className="font-bold text-sunset">已达最高等级</span>
+                    </>
+                  )}
+                </p>
+                {coffeeMachine.level < coffeeMachine.maxLevel ? (
+                  <button
+                    onClick={upgradeCoffeeMachine}
+                    disabled={coins < coffeeMachine.upgradeCost}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-sm transition-all',
+                      coins >= coffeeMachine.upgradeCost
+                        ? 'bg-gradient-to-r from-sunset to-orange-400 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    )}
+                  >
+                    <Coins className="w-4 h-4" />
+                    {coffeeMachine.upgradeCost}
+                  </button>
+                ) : (
+                  <div className="w-full py-2 rounded-xl bg-sunset/20 text-sunset text-center font-bold text-sm">
+                    ✓ 已满级
+                  </div>
+                )}
+              </div>
             </div>
           </section>
         </div>
