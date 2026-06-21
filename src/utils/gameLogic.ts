@@ -237,8 +237,13 @@ export const createDeliveryOrder = (drinks: Drink[]): DeliveryOrder | null => {
     maxTime,
     status: 'pending',
     barStationId: null,
+    barStationName: null,
     makeProgress: 0,
     createdAt: Date.now(),
+    acceptedAt: null,
+    startedMakingAt: null,
+    deliveredAt: null,
+    refundedAt: null,
   };
 };
 

@@ -123,8 +123,13 @@ export interface DeliveryOrder {
   maxTime: number;
   status: DeliveryStatus;
   barStationId: string | null;
+  barStationName: string | null;
   makeProgress: number;
   createdAt: number;
+  acceptedAt: number | null;
+  startedMakingAt: number | null;
+  deliveredAt: number | null;
+  refundedAt: number | null;
 }
 
 export interface BarStation {
@@ -177,6 +182,7 @@ export interface GameState {
   showReservationPanel: boolean;
   showCatTraining: boolean;
   deliveryOrders: DeliveryOrder[];
+  deliveryOrderHistory: DeliveryOrder[];
   barStations: BarStation[];
   showDeliveryPanel: boolean;
   todayDeliveryStats: DeliveryDailyStats;

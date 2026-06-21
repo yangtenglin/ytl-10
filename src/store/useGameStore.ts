@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState, GameActions, Customer, Reservation, DeliveryOrder, DeliveryDailyStats } from '../types/game';
+import type { GameState, GameActions, Customer, Reservation, DeliveryOrder } from '../types/game';
 import { GAME_CONFIG, CAT_MAX_INTIMACY_LEVEL, CAT_TRAINING_COST, CAT_TRAINING_EXP_GAIN } from '../utils/constants';
 import { createInitialCats, createInitialSeats, createInitialDrinks, createInitialBarStations, createInitialDeliveryStats } from '../utils/initialData';
 import {
@@ -54,6 +54,7 @@ const getInitialState = (): GameState => ({
   showReservationPanel: false,
   showCatTraining: false,
   deliveryOrders: [],
+  deliveryOrderHistory: [],
   barStations: createInitialBarStations(),
   showDeliveryPanel: false,
   todayDeliveryStats: createInitialDeliveryStats(),
@@ -363,6 +364,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       }
 
       const updatedDeliveryOrders: DeliveryOrder[] = [];
+      const autoFinishedOrders: DeliveryOrder[] = [];
       let deliveryCoinsGained = 0;
       let deliveryRevenueGained = 0;
       let deliveryRefunds = 0;
@@ -378,11 +380,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           if (o.timeLeft <= o.maxTime - GAME_CONFIG.DELIVERY_ACCEPT_WINDOW) {
             o.status = 'expired';
             expiredCount++;
+            autoFinishedOrders.push(o);
           }
         } else if (o.status === 'accepted') {
           o.timeLeft = o.timeLeft - deltaSeconds;
           if (o.timeLeft <= 0) {
             o.status = 'refunded';
+            o.refundedAt = Date.now();
             refundedCount++;
             deliveryRefunds += o.totalPrice;
             newState.coins = newState.coins - o.totalPrice;
@@ -391,6 +395,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
                 st.id === o.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
               );
             }
+            autoFinishedOrders.push(o);
           }
         } else if (o.status === 'making') {
           o.timeLeft = o.timeLeft - deltaSeconds;
@@ -406,6 +411,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           }
           if (o.timeLeft <= 0) {
             o.status = 'refunded';
+            o.refundedAt = Date.now();
             refundedCount++;
             deliveryRefunds += o.totalPrice;
             newState.coins = newState.coins - o.totalPrice;
@@ -414,11 +420,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
                 st.id === o.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
               );
             }
+            autoFinishedOrders.push(o);
           }
         } else if (o.status === 'delivering') {
           o.timeLeft = o.timeLeft - deltaSeconds;
           if (o.timeLeft <= 0) {
             o.status = 'refunded';
+            o.refundedAt = Date.now();
             refundedCount++;
             deliveryRefunds += o.totalPrice;
             newState.coins = newState.coins - o.totalPrice;
@@ -427,6 +435,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
                 st.id === o.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
               );
             }
+            autoFinishedOrders.push(o);
           }
         }
 
@@ -436,6 +445,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       }
 
       newState.deliveryOrders = updatedDeliveryOrders;
+      newState.deliveryOrderHistory = [...autoFinishedOrders, ...newState.deliveryOrderHistory];
       newState.coins += deliveryCoinsGained;
 
       newState.todayDeliveryStats = {
@@ -740,6 +750,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         r.status === 'settled' || r.status === 'expired' ? r : { ...r, status: 'expired' as const }
       ),
       deliveryOrders: [],
+      deliveryOrderHistory: [],
       barStations: state.barStations.map((st) => ({ ...st, occupied: false, deliveryOrderId: null })),
       queue: [],
     }));
@@ -996,7 +1007,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set((state) => ({
       ...state,
       deliveryOrders: state.deliveryOrders.map((o) =>
-        o.id === orderId ? { ...o, status: 'accepted', barStationId: emptyStation.id } : o
+        o.id === orderId
+          ? { ...o, status: 'accepted', barStationId: emptyStation.id, barStationName: emptyStation.name, acceptedAt: Date.now() }
+          : o
       ),
       barStations: state.barStations.map((st) =>
         st.id === emptyStation.id ? { ...st, occupied: true, deliveryOrderId: orderId } : st
@@ -1013,7 +1026,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set((state) => ({
       ...state,
       deliveryOrders: state.deliveryOrders.map((o) =>
-        o.id === orderId ? { ...o, status: 'making', makeProgress: 0 } : o
+        o.id === orderId ? { ...o, status: 'making', makeProgress: 0, startedMakingAt: Date.now() } : o
       ),
     }));
     return true;
@@ -1025,6 +1038,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!order || (order.status !== 'delivering' && order.status !== 'making')) return;
 
     const payment = calculateDeliveryPayment(order);
+    const completedOrder: DeliveryOrder = {
+      ...order,
+      status: 'completed',
+      deliveredAt: Date.now(),
+    };
 
     set((state) => ({
       ...state,
@@ -1035,6 +1053,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         deliveryRevenue: state.todayDeliveryStats.deliveryRevenue + payment,
       },
       deliveryOrders: state.deliveryOrders.filter((o) => o.id !== orderId),
+      deliveryOrderHistory: [completedOrder, ...state.deliveryOrderHistory],
       barStations: state.barStations.map((st) =>
         st.id === order.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
       ),
@@ -1057,6 +1076,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!order || order.status === 'completed' || order.status === 'refunded' || order.status === 'expired') return;
 
     const refundAmount = order.totalPrice;
+    const refundedOrder: DeliveryOrder = {
+      ...order,
+      status: 'refunded',
+      refundedAt: Date.now(),
+    };
 
     set((state) => ({
       ...state,
@@ -1067,6 +1091,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         deliveryRefunds: state.todayDeliveryStats.deliveryRefunds + refundAmount,
       },
       deliveryOrders: state.deliveryOrders.filter((o) => o.id !== orderId),
+      deliveryOrderHistory: [refundedOrder, ...state.deliveryOrderHistory],
       barStations: state.barStations.map((st) =>
         st.id === order.barStationId ? { ...st, occupied: false, deliveryOrderId: null } : st
       ),

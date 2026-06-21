@@ -1,21 +1,97 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { DeliveryCard } from './DeliveryCard';
 import { GAME_CONFIG } from '@/utils/constants';
-import { X, Bike, ChefHat, Coins, TrendingUp, TrendingDown, CheckCircle, Clock, AlertTriangle, Plus, Zap } from 'lucide-react';
+import type { DeliveryOrder } from '@/types/game';
+import { X, Bike, ChefHat, Coins, TrendingUp, TrendingDown, CheckCircle, Clock, AlertTriangle, Plus, Zap, ChevronDown, ChevronUp, FileText, Package, TrendingDown as TrendingDownIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const formatTimestamp = (ts: number | null): string => {
+  if (!ts) return '--:--:--';
+  const d = new Date(ts);
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+};
+
+interface HistoryRowProps {
+  order: DeliveryOrder;
+}
+
+const HistoryRow: React.FC<HistoryRowProps> = ({ order }) => {
+  const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+    completed: { label: '已完成', color: 'text-mint', bg: 'bg-mint/10 border-mint/30' },
+    refunded: { label: '已退款', color: 'text-danger', bg: 'bg-danger/10 border-danger/30' },
+    expired: { label: '已过期', color: 'text-gray-400', bg: 'bg-gray-100 border-gray-300' },
+  };
+  const cfg = statusConfig[order.status] || statusConfig.expired;
+
+  return (
+    <div className={cn('rounded-xl border-2 p-3 mb-2', cfg.bg)}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{order.customerEmoji}</span>
+          <span className="font-black text-coffee-dark text-sm">{order.customerName}</span>
+          <span className="text-xs text-coffee-light">{order.drinkEmoji} {order.drinkName}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={cn('text-xs font-bold', cfg.color)}>{cfg.label}</span>
+          <span className="font-black text-gold text-sm">{order.totalPrice}💰</span>
+        </div>
+      </div>
+
+      {order.barStationName && (
+        <div className="text-[11px] text-coffee-light mb-2">
+          吧台：<span className="font-bold text-coffee">{order.barStationName}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5 text-coffee-light">
+          <Clock className="w-3 h-3 text-sunset" />
+          <span>下单 {formatTimestamp(order.createdAt)}</span>
+        </div>
+        {order.status !== 'expired' && (
+          <div className="flex items-center gap-1.5 text-coffee-light">
+            <CheckCircle className="w-3 h-3 text-coffee" />
+            <span>接单 {formatTimestamp(order.acceptedAt)}</span>
+          </div>
+        )}
+        {order.status !== 'expired' && order.startedMakingAt && (
+          <div className="flex items-center gap-1.5 text-coffee-light">
+            <ChefHat className="w-3 h-3 text-lavender" />
+            <span>制作 {formatTimestamp(order.startedMakingAt)}</span>
+          </div>
+        )}
+        {order.status === 'completed' && (
+          <div className="flex items-center gap-1.5 text-coffee-light">
+            <Package className="w-3 h-3 text-mint" />
+            <span>送达 {formatTimestamp(order.deliveredAt)}</span>
+          </div>
+        )}
+        {order.status === 'refunded' && (
+          <div className="flex items-center gap-1.5 text-coffee-light">
+            <TrendingDownIcon className="w-3 h-3 text-danger" />
+            <span>退款 {formatTimestamp(order.refundedAt)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const DeliveryPanel: React.FC = () => {
   const {
     showDeliveryPanel,
     closeDeliveryPanel,
     deliveryOrders,
+    deliveryOrderHistory,
     barStations,
     coins,
     todayDeliveryStats,
     upgradeBarStation,
     expandBarStation,
   } = useGameStore();
+
+  const [showHistory, setShowHistory] = useState(false);
 
   if (!showDeliveryPanel) return null;
 
@@ -236,6 +312,38 @@ export const DeliveryPanel: React.FC = () => {
                   </span>
                 </div>
               </div>
+            </section>
+          )}
+
+          {deliveryOrderHistory.length > 0 && (
+            <section className="p-4 bg-white/50 rounded-2xl border border-warm-200">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-coffee/10">
+                    <FileText className="w-5 h-5 text-coffee" />
+                  </div>
+                  <h3 className="text-lg font-black text-coffee-dark">今日订单流水</h3>
+                  <span className="px-2.5 py-0.5 bg-coffee/10 rounded-full text-xs font-bold text-coffee">
+                    {deliveryOrderHistory.length} 单
+                  </span>
+                </div>
+                {showHistory ? (
+                  <ChevronUp className="w-5 h-5 text-coffee-light" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-coffee-light" />
+                )}
+              </button>
+
+              {showHistory && (
+                <div className="mt-4 pt-4 border-t border-dashed border-warm-300 max-h-96 overflow-y-auto pr-1">
+                  {deliveryOrderHistory.map((order) => (
+                    <HistoryRow key={order.id} order={order} />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
