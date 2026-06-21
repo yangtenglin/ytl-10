@@ -873,7 +873,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const reservation = buildReservation(seatId, timeSlot, preferredCatId);
     set((state) => ({
       ...state,
-      coins: state.coins - GAME_CONFIG.RESERVATION_DEPOSIT,
+      coins: state.coins + GAME_CONFIG.RESERVATION_DEPOSIT,
       todayRevenue: state.todayRevenue + GAME_CONFIG.RESERVATION_DEPOSIT,
       todayReservationDeposits: state.todayReservationDeposits + GAME_CONFIG.RESERVATION_DEPOSIT,
       reservations: [...state.reservations, reservation],
@@ -911,9 +911,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     set((state) => ({
       ...state,
-      coins: state.coins + depositLoss,
-      todayRevenue: state.todayRevenue + depositLoss,
-      todayReservationDeposits: state.todayReservationDeposits + depositLoss,
       reservations: state.reservations.map((r) =>
         r.id === reservationId
           ? {
@@ -933,10 +930,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             ...state.floatTexts,
             {
               id: generateId(),
-              text: `改约扣定金+${depositLoss}💰`,
+              text: `改约定金 -${depositLoss}💰`,
               x: 50 + randInt(-20, 20),
               y: 35,
-              color: '#FFD700',
+              color: '#FF8A8A',
             },
           ].slice(-10)
         : state.floatTexts,

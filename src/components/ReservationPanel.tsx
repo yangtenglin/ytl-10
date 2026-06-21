@@ -39,7 +39,6 @@ export const ReservationPanel: React.FC = () => {
   const canCreate =
     selectedSeatId &&
     selectedTimeSlot !== null &&
-    coins >= GAME_CONFIG.RESERVATION_DEPOSIT &&
     !existingSlotSeat.has(`${selectedSeatId}-${selectedTimeSlot}`);
 
   const handleCreate = () => {
@@ -216,7 +215,7 @@ export const ReservationPanel: React.FC = () => {
                 {canCreate ? (
                   <span className="flex items-center justify-center gap-2">
                     <CalendarPlus className="w-5 h-5" />
-                    确认预约 · 支付定金 {GAME_CONFIG.RESERVATION_DEPOSIT}💰
+                    确认预约 · 收取定金 {GAME_CONFIG.RESERVATION_DEPOSIT}💰
                   </span>
                 ) : (
                   '请选择时段和座位'
