@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import type { DailyReport } from '../types/game';
-import { Sparkles, TrendingUp, TrendingDown, Users, Smile, Flame, Award, ArrowRight, Bike } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Users, Smile, Flame, Award, ArrowRight, Bike, Calendar, XCircle, AlertTriangle, Star } from 'lucide-react';
 
 interface StatRowProps {
   icon: React.ReactNode;
@@ -131,6 +131,36 @@ export const DailyReportModal: React.FC = () => {
                 label="最高连击"
                 value={<span className="text-sunset">{report.maxCombo}x (+{report.comboBonus})</span>}
               />
+            )}
+
+            {(report.reservationDeposits > 0 || report.deliveryRefunds > 0 || report.rushHourLost > 0 || report.catUpgrades > 0) && (
+              <>
+                <div className="my-3 border-t border-dashed border-warm-300" />
+                <StatRow
+                  delay={1150}
+                  icon={<Calendar className="w-5 h-5 text-lavender" />}
+                  label="预约定金"
+                  value={<span className="text-mint">+{report.reservationDeposits} 💰</span>}
+                />
+                <StatRow
+                  delay={1250}
+                  icon={<XCircle className="w-5 h-5 text-danger" />}
+                  label="外卖退款"
+                  value={<span className="text-danger">-{report.deliveryRefunds} 💰</span>}
+                />
+                <StatRow
+                  delay={1350}
+                  icon={<AlertTriangle className="w-5 h-5 text-sunset" />}
+                  label="早高峰流失"
+                  value={<span className="text-sunset">{report.rushHourLost} 位</span>}
+                />
+                <StatRow
+                  delay={1450}
+                  icon={<Star className="w-5 h-5 text-gold" />}
+                  label="猫咪升级次数"
+                  value={<span className="text-gold">{report.catUpgrades} 次</span>}
+                />
+              </>
             )}
 
             {todayDeliveryStats.totalOrders > 0 && (

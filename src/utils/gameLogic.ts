@@ -80,7 +80,11 @@ export const createDailyReport = (
   customersServed: number,
   happyCustomers: number,
   maxCombo: number,
-  comboBonusTotal: number
+  comboBonusTotal: number,
+  reservationDeposits: number,
+  deliveryRefunds: number,
+  rushHourLost: number,
+  catUpgrades: number
 ): DailyReport => {
   const happyRate = customersServed > 0 ? Math.round((happyCustomers / customersServed) * 100) : 0;
   return {
@@ -92,6 +96,10 @@ export const createDailyReport = (
     happyRate,
     maxCombo,
     comboBonus: comboBonusTotal,
+    reservationDeposits,
+    deliveryRefunds,
+    rushHourLost,
+    catUpgrades,
   };
 };
 

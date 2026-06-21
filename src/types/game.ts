@@ -86,6 +86,10 @@ export interface DailyReport {
   happyRate: number;
   maxCombo: number;
   comboBonus: number;
+  reservationDeposits: number;
+  deliveryRefunds: number;
+  rushHourLost: number;
+  catUpgrades: number;
 }
 
 export type ReservationStatus = 'pending' | 'arrived' | 'seated' | 'settled' | 'expired';
@@ -202,6 +206,8 @@ export interface GameState {
   todayQueueLeftAngry: number;
   todayQueueServed: number;
   coffeeMachine: Equipment;
+  todayReservationDeposits: number;
+  todayCatUpgrades: number;
 }
 
 export interface GameActions {

@@ -64,6 +64,8 @@ const getInitialState = (): GameState => ({
   todayQueueLeftAngry: 0,
   todayQueueServed: 0,
   coffeeMachine: createInitialCoffeeMachine(),
+  todayReservationDeposits: 0,
+  todayCatUpgrades: 0,
 });
 
 const STORAGE_KEY = 'cat-cafe-save';
@@ -733,7 +735,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       s.todayCustomers + s.todayDeliveryStats.completedOrders,
       s.todayHappyCustomers,
       s.maxCombo,
-      s.comboBonusTotal
+      s.comboBonusTotal,
+      s.todayReservationDeposits,
+      s.todayDeliveryStats.deliveryRefunds,
+      s.todayQueueLeftAngry,
+      s.todayCatUpgrades
     );
 
     set((state) => ({
@@ -783,6 +789,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       todayQueueLeftAngry: 0,
       todayQueueServed: 0,
       queue: [],
+      todayReservationDeposits: 0,
+      todayCatUpgrades: 0,
     }));
   },
 
@@ -867,6 +875,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ...state,
       coins: state.coins - GAME_CONFIG.RESERVATION_DEPOSIT,
       todayRevenue: state.todayRevenue + GAME_CONFIG.RESERVATION_DEPOSIT,
+      todayReservationDeposits: state.todayReservationDeposits + GAME_CONFIG.RESERVATION_DEPOSIT,
       reservations: [...state.reservations, reservation],
     }));
     return true;
@@ -904,6 +913,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ...state,
       coins: state.coins + depositLoss,
       todayRevenue: state.todayRevenue + depositLoss,
+      todayReservationDeposits: state.todayReservationDeposits + depositLoss,
       reservations: state.reservations.map((r) =>
         r.id === reservationId
           ? {
@@ -979,12 +989,15 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!cat || !cat.unlocked || s.coins < CAT_TRAINING_COST) return false;
     if (cat.intimacyLevel >= CAT_MAX_INTIMACY_LEVEL) return false;
 
+    const oldLevel = cat.intimacyLevel;
     const expResult = addCatExp(cat, CAT_TRAINING_EXP_GAIN);
+    const leveledUp = expResult.intimacyLevel > oldLevel;
 
     set((state) => ({
       ...state,
       coins: state.coins - CAT_TRAINING_COST,
       todayExpense: state.todayExpense + CAT_TRAINING_COST,
+      todayCatUpgrades: leveledUp ? state.todayCatUpgrades + 1 : state.todayCatUpgrades,
       cats: state.cats.map((c) =>
         c.id === catId ? { ...c, intimacyLevel: expResult.intimacyLevel, intimacyExp: expResult.intimacyExp } : c
       ),
