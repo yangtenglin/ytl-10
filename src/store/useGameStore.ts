@@ -857,6 +857,68 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     return true;
   },
 
+  rescheduleReservation: (reservationId: string, newSeatId: string, newTimeSlot: number) => {
+    const s = get();
+    const reservation = s.reservations.find((r) => r.id === reservationId);
+    if (!reservation) return false;
+
+    if (reservation.rescheduled) return false;
+    if (reservation.status !== 'pending' && reservation.status !== 'arrived') return false;
+
+    const conflict = s.reservations.find(
+      (r) =>
+        r.id !== reservationId &&
+        r.seatId === newSeatId &&
+        r.timeSlot === newTimeSlot &&
+        r.status !== 'settled' &&
+        r.status !== 'expired'
+    );
+    if (conflict) return false;
+
+    const isPastArrival = reservation.status === 'arrived' || s.timeOfDay >= reservation.timeSlot;
+    const depositLoss = isPastArrival
+      ? Math.round(reservation.deposit * GAME_CONFIG.RESERVATION_RESCHEDULE_DEPOSIT_LOSS)
+      : 0;
+
+    const newDeposit = reservation.deposit - depositLoss;
+
+    const newSeat = s.seats.find((st) => st.id === newSeatId);
+    if (!newSeat) return false;
+
+    set((state) => ({
+      ...state,
+      coins: state.coins + depositLoss,
+      todayRevenue: state.todayRevenue + depositLoss,
+      reservations: state.reservations.map((r) =>
+        r.id === reservationId
+          ? {
+              ...r,
+              seatId: newSeatId,
+              timeSlot: newTimeSlot,
+              deposit: newDeposit,
+              rescheduled: true,
+              lateness: 0,
+              satisfactionPenalty: 0,
+              status: s.timeOfDay >= newTimeSlot - GAME_CONFIG.RESERVATION_ARRIVAL_THRESHOLD ? 'arrived' : 'pending',
+            }
+          : r
+      ),
+      floatTexts: depositLoss > 0
+        ? [
+            ...state.floatTexts,
+            {
+              id: generateId(),
+              text: `改约扣定金+${depositLoss}💰`,
+              x: 50 + randInt(-20, 20),
+              y: 35,
+              color: '#FFD700',
+            },
+          ].slice(-10)
+        : state.floatTexts,
+    }));
+    return true;
+  },
+
   seatReservation: (reservationId: string) => {
     const s = get();
     const reservation = s.reservations.find((r) => r.id === reservationId);

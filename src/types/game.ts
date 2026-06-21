@@ -102,6 +102,9 @@ export interface Reservation {
   customerId: string | null;
   lateness: number;
   satisfactionPenalty: number;
+  rescheduled: boolean;
+  originalTimeSlot: number;
+  originalSeatId: string | null;
 }
 
 export type DeliveryStatus = 'pending' | 'accepted' | 'making' | 'delivering' | 'completed' | 'refunded' | 'expired';
@@ -210,6 +213,7 @@ export interface GameActions {
   saveGame: () => void;
   loadGame: () => boolean;
   createReservation: (seatId: string, timeSlot: number, preferredCatId: string | null) => boolean;
+  rescheduleReservation: (reservationId: string, newSeatId: string, newTimeSlot: number) => boolean;
   seatReservation: (reservationId: string) => void;
   settleReservation: (reservationId: string) => void;
   openReservationPanel: () => void;

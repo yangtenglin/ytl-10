@@ -129,6 +129,9 @@ export const createReservation = (
     customerId: null,
     lateness: 0,
     satisfactionPenalty: 0,
+    rescheduled: false,
+    originalTimeSlot: timeSlot,
+    originalSeatId: seatId,
   };
 };
 
